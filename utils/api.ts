@@ -36,7 +36,7 @@ api.interceptors.response.use(
 
       const refreshToken = localStorage.getItem("refresh_token");
       if (!refreshToken) {
-        console.log("❌ Refresh token yo'q.");
+        console.log("❌ Refresh token yoq.");
         return Promise.reject(error);
       }
 

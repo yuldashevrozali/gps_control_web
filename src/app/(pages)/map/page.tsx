@@ -256,7 +256,7 @@ const Map = () => {
             <p><strong>Ism:</strong> {selectedClient.name}</p>
             <p><strong>Telefon:</strong> {selectedClient.phone}</p>
             <p><strong>Kompaniya:</strong> {selectedClient.company}</p>
-            <p><strong>Qarzdorlik:</strong> {selectedClient.debt.toLocaleString()} so'm</p>
+            <p><strong>Qarzdorlik:</strong> {selectedClient.debt.toLocaleString()} som</p>
           </div>
         </div>
       )}
