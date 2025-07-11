@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { useEffect, useState } from "react";
 import api from "../../../../utils/api";
 import {
   Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow,
@@ -21,7 +22,6 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 
 type Agent = {
@@ -44,72 +44,71 @@ const AllEmployees = () => {
   const [loading, setLoading] = useState(false);
   const itemsPerPage = 10;
 
-  // 1️⃣ Faqat bir marta tokenni localStorage'ga saqlaymiz
+  // 🔐 1. Saqlangan refresh_token
   useEffect(() => {
-    localStorage.setItem("refresh_token", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6MTc1MjY0NDIzOCwiaWF0IjoxNzUyMjEyMjM4LCJqdGkiOiI3NGU1MzVmZmJiZDA0NWMyODIxMGM5ZDE5Nzk1OGFlMSIsInVzZXJfaWQiOjF9.4qE57fX2knUhKk-54sHa7IjFOdeE2pOTt5-C5btQ12I");
+    localStorage.setItem("refresh_token", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6MTc1MjY4MDM1MSwiaWF0IjoxNzUyMjQ4MzUxLCJqdGkiOiIxOTE2NDhjY2E4ODU0NzJkOWMwYjNlNWM1NzNiNWU1ZSIsInVzZXJfaWQiOjF9.gv_viq_qNxvWDY3YB3yA4AHbffnNfE8EYal9hFI2dJs");
   }, []);
 
-  // 2️⃣ WebSocket orqali agentlar ro‘yxatini olish
- useEffect(() => {
-  const connectWebSocket = (token: string) => {
-    const socket = new WebSocket(`ws://83.149.105.190:8000/ws/location/?token=${token}`);
+  // 🔌 2. WebSocket ulanishi
+  useEffect(() => {
+    const connectWebSocket = (token: string) => {
+      const socket = new WebSocket(`wss://gps.mxsoft.uz/ws/location/?token=${token}`);
 
-    socket.onopen = () => console.log("✅ WebSocket ulanish ochildi");
-    socket.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        if (data && data.agents_data) {
-          setAgents(data.agents_data);
-          setFilteredAgents(data.agents_data);
+
+      socket.onopen = () => console.log("✅ WebSocket ochildi");
+      socket.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data?.agents_data) {
+            setAgents(data.agents_data);
+            setFilteredAgents(data.agents_data);
+          }
+        } catch (error) {
+          console.error("❌ JSON parsing xatoligi:", error);
         }
-      } catch (error) {
-        console.error("❌ JSON parsing xatoligi:", error);
-      }
+      };
+
+      socket.onerror = (error) => console.error("❌ WebSocket xatoligi:", error);
+      socket.onclose = () => console.log("🔌 WebSocket yopildi");
     };
 
-    socket.onerror = (error) => console.error("❌ WebSocket xato:", error);
-    socket.onclose = () => console.log("🔌 WebSocket yopildi");
-  };
+    const token = localStorage.getItem("access_token");
 
-  const token = localStorage.getItem("access_token");
-
-  if (token) {
-    connectWebSocket(token);
-  } else {
-    console.warn("❗ access_token topilmadi, refresh_token orqali olishga urinyapmiz...");
-
-    const refresh = localStorage.getItem("refresh_token");
-
-    if (refresh) {
-      // Refresh orqali yangi access token olish
-      fetch("http://83.149.105.190:8000/account/token/refresh/", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ refresh }),
-      })
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.access) {
-            localStorage.setItem("access_token", data.access);
-            connectWebSocket(data.access);
-          } else {
-            console.error("❌ Access token olishda xatolik:", data);
-          }
-        })
-        .catch((err) => {
-          console.error("❌ Access tokenni refresh qilishda xatolik:", err);
-        });
+    if (token) {
+      connectWebSocket(token);
     } else {
-      console.warn("❗ refresh_token ham topilmadi.");
+      const refresh = localStorage.getItem("refresh_token");
+
+      if (refresh) {
+        fetch("https://gps.mxsoft.uz/account/token/refresh/", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ refresh }),
+        })
+          .then((res) => {
+            if (!res.ok) throw new Error("Server javob bermadi");
+            return res.json();
+          })
+          .then((data) => {
+            if (data.access) {
+              localStorage.setItem("access_token", data.access);
+              connectWebSocket(data.access);
+            } else {
+              console.error("❌ Yangi access token olinmadi:", data);
+            }
+          })
+          .catch((err) => {
+            console.error("❌ Access tokenni yangilashda xatolik:", err.message);
+          });
+      } else {
+        console.warn("❗ refresh_token topilmadi.");
+      }
     }
-  }
-}, []);
+  }, []);
 
-
-
-  // 3️⃣ Qidiruv
+  // 🔍 3. Qidiruv
   useEffect(() => {
     const term = searchTerm.toLowerCase();
     const filtered = agents.filter(
@@ -145,11 +144,11 @@ const AllEmployees = () => {
         new_password: newPassword,
         new_password_confirm: newPassword,
       });
-      toast.success("✅ Parol muvaffaqiyatli o‘zgartirildi");
+      toast.success("✅ Parol o‘zgartirildi");
       setIsModalOpen(false);
     } catch (error) {
-      console.error("❌ Parol o‘zgartirishda xatolik:", error);
-      toast.error("❌ Parolni o‘zgartrishda xatolik!");
+      console.error("❌ Parolni almashtirishda xatolik:", error);
+      toast.error("❌ Parolni o‘zgartirishda muammo yuz berdi");
     } finally {
       setLoading(false);
     }
@@ -157,7 +156,7 @@ const AllEmployees = () => {
 
   return (
     <div className="border rounded-lg p-4 mt-4 overflow-x-auto">
-      {/* Search va Filter */}
+      {/* 🔎 Qidiruv va filter */}
       <div className="flex flex-col gap-4 md:flex-row md:justify-between mb-6">
         <div className="w-full md:w-72 relative">
           <Input
@@ -184,7 +183,7 @@ const AllEmployees = () => {
         </div>
       </div>
 
-      {/* Jadval */}
+      {/* 🧾 Jadval */}
       <Table>
         <TableHeader>
           <TableRow>
@@ -213,6 +212,7 @@ const AllEmployees = () => {
                     alt="Avatar"
                     width={36}
                     height={36}
+                    style={{ width: "auto", height: "auto" }}
                     className="rounded-full"
                   />
                   {agent.full_name}
@@ -233,15 +233,14 @@ const AllEmployees = () => {
                   )}
                 </TableCell>
                 <TableCell>
-  <div className="flex items-center gap-2 h-full">
-    <Eye className="w-4 h-4 cursor-pointer hover:text-purple-600" />
-    <Pencil
-      className="w-4 h-4 cursor-pointer hover:text-yellow-500"
-      onClick={() => openEditModal(agent)}
-    />
-  </div>
-</TableCell>
-
+                  <div className="flex items-center gap-2 h-full">
+                    <Eye className="w-4 h-4 cursor-pointer hover:text-purple-600" />
+                    <Pencil
+                      className="w-4 h-4 cursor-pointer hover:text-yellow-500"
+                      onClick={() => openEditModal(agent)}
+                    />
+                  </div>
+                </TableCell>
               </TableRow>
             ))
           )}
@@ -296,7 +295,7 @@ const AllEmployees = () => {
         </TableFooter>
       </Table>
 
-      {/* Parol o‘zgartirish Modal */}
+      {/* 🔑 Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent>
           <DialogHeader>

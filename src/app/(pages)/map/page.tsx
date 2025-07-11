@@ -112,22 +112,39 @@ const Map = () => {
     iconAnchor: [16, 32]
   })).current;
 
-  useEffect(() => {
-    const socket = new WebSocket('ws://83.149.105.190:8000/ws/location/?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6MTc1MjY0NDIzOCwiaWF0IjoxNzUyMjEyMjM4LCJqdGkiOiI3NGU1MzVmZmJiZDA0NWMyODIxMGM5ZDE5Nzk1OGFlMSIsInVzZXJfaWQiOjF9.4qE57fX2knUhKk-54sHa7IjFOdeE2pOTt5-C5btQ12I');
+ useEffect(() => {
+  const socket = new WebSocket(
+    'wss://gps.mxsoft.uz/ws/location/?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzUyMjU3MTIyLCJpYXQiOjE3NTIyNDk5MjIsImp0aSI6IjhiZTQxN2QxNDM1YTQ4Y2ViMmRkYTNhNWQ2ZmIyZThjIiwidXNlcl9pZCI6MX0.1pVay6BG8wj72Bk6f7F401Kt0LPHrYjWvO9paXqHNcc'
+  );
 
-    socket.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        setAgents(data.agents_data);
-      } catch (err) {
-        console.error('JSON parse xatosi:', err);
-      }
-    };
+  socket.onopen = () => {
+    console.log("✅ WebSocket muvaffaqiyatli ulandi");
+  };
 
-    return () => {
-      socket.close();
-    };
-  }, []);
+  socket.onmessage = (event) => {
+    try {
+      const data = JSON.parse(event.data);
+      console.log("📨 WebSocket'dan kelgan ma'lumot:", data);
+      setAgents(data.agents_data);
+    } catch (err) {
+      console.error("❌ JSON parse xatosi:", err);
+    }
+  };
+
+  socket.onerror = (error) => {
+    console.error("🚨 WebSocket ulanishda xato:", error);
+  };
+
+  socket.onclose = (event) => {
+    console.warn(`🔌 WebSocket yopildi. Kod: ${event.code}, Sabab: ${event.reason || 'ko‘rsatilmagan'}`);
+  };
+
+  return () => {
+    console.log("🧹 WebSocket tozalanmoqda...");
+    socket.close();
+  };
+}, []);
+
 
   useEffect(() => {
     if (!mapRef.current) {

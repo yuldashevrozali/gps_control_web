@@ -1,25 +1,25 @@
 // middleware.ts
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
 
 export function middleware(request: NextRequest) {
-  const isLoggedIn = request.cookies.get('loggedIn')?.value === 'true';
-  const { pathname } = request.nextUrl;
+  const loggedIn = request.cookies.get('loggedIn')?.value;
+  const isLoginPage = request.nextUrl.pathname === '/login';
 
-  // If the user is not logged in and tries to access /dashboard, redirect to /login
-  if (!isLoggedIn && pathname.startsWith('/dashboard')) {
+  // Agar foydalanuvchi login bo'lmagan bo'lsa va login sahifasida emas — login sahifasiga yo'naltiramiz
+  if (loggedIn !== 'true' && !isLoginPage) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
-  // If the user is logged in and tries to access /login, redirect to /dashboard
-  if (isLoggedIn && pathname === '/login') {
+  // Agar foydalanuvchi allaqachon login bo'lgan bo'lsa va login sahifasiga urinsa — dashboardga o'tkazamiz
+  if (loggedIn === 'true' && isLoginPage) {
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 
-  return NextResponse.next(); // Continue to the requested page
+  // Aks holda davom ettir
+  return NextResponse.next();
 }
 
-// Specify the paths where the middleware should run
 export const config = {
-  matcher: ['/dashboard/:path*', '/login'], // Protect /dashboard and its sub-paths, and handle /login
+  matcher: ["/((?!_next|favicon.ico|api|fonts|images|assets).*)"],
 };
