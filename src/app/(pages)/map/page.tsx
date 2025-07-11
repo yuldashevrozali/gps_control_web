@@ -151,21 +151,29 @@ const Map = () => {
     stopMarkersRef.current = [];
     clientMarkersRef.current.forEach(marker => mapRef.current?.removeLayer(marker));
     clientMarkersRef.current = [];
+const path: L.LatLngTuple[] = agent.location_history.map(
+  (loc): L.LatLngTuple => [loc.latitude, loc.longitude]
+);
 
-    polylineRef.current = L.polyline(path, { color: 'blue' }).addTo(mapRef.current);
+polylineRef.current = L.polyline(path, { color: 'blue' }).addTo(mapRef.current);
 
-    const start = path[0];
-    startMarkerRef.current = L.marker(start, { icon: greenIcon })
-      .addTo(mapRef.current)
-      .bindPopup(`<strong>${agent.full_name}</strong><br/>📞 ${agent.phone_number}<br/>🟢 ${agent.is_working ? 'Ishlayapti' : 'Ishlamayapti'}`)
-      .openPopup();
+const start: L.LatLngTuple = path[0];
+startMarkerRef.current = L.marker(start, { icon: greenIcon })
+  .addTo(mapRef.current)
+  .bindPopup(
+    `<strong>${agent.full_name}</strong><br/>📞 ${agent.phone_number}<br/>🟢 ${agent.is_working ? 'Ishlayapti' : 'Ishlamayapti'}`
+  )
+  .openPopup();
 
-    const end = path[path.length - 1];
-    const totalKm = totalDistance(agent.location_history);
+const end: L.LatLngTuple = path[path.length - 1];
+const totalKm = totalDistance(agent.location_history);
 
-    endMarkerRef.current = L.marker(end, { icon: redIcon })
-      .addTo(mapRef.current)
-      .bindPopup(`<strong>Tugash nuqtasi</strong><br/>📞 ${agent.phone_number}<br/>📏 Umumiy masofa: ${totalKm} km`);
+endMarkerRef.current = L.marker(end, { icon: redIcon })
+  .addTo(mapRef.current)
+  .bindPopup(
+    `<strong>Tugash nuqtasi</strong><br/>📞 ${agent.phone_number}<br/>📏 Umumiy masofa: ${totalKm} km`
+  );
+
 
     agent.location_history.forEach((loc, idx) => {
       if (loc.is_stop) {
