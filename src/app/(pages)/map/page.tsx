@@ -56,7 +56,6 @@ type ClientPopupData = {
   contract_number: string;
 };
 
-
 function calculateDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371;
   const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -87,7 +86,7 @@ const Map = () => {
   const mapRef = useRef<L.Map | null>(null);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [agents, setAgents] = useState<Agent[]>([]);
-  const [selectedClient, setSelectedClient] = useState<ClientPopupData>(null);
+  const [selectedClient, setSelectedClient] = useState<ClientPopupData | null>(null);
 
   const polylineRef = useRef<L.Polyline | null>(null);
   const startMarkerRef = useRef<L.Marker | null>(null);
@@ -95,23 +94,23 @@ const Map = () => {
   const stopMarkersRef = useRef<L.Marker[]>([]);
   const clientMarkersRef = useRef<L.Marker[]>([]);
 
-  const greenIcon = L.icon({
+  const greenIcon = useRef(L.icon({
     iconUrl: 'https://maps.google.com/mapfiles/ms/icons/green-dot.png',
     iconSize: [32, 32],
     iconAnchor: [16, 32]
-  });
+  })).current;
 
-  const redIcon = L.icon({
+  const redIcon = useRef(L.icon({
     iconUrl: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',
     iconSize: [32, 32],
     iconAnchor: [16, 32]
-  });
+  })).current;
 
-  const yellowIcon = L.icon({
+  const yellowIcon = useRef(L.icon({
     iconUrl: 'https://maps.google.com/mapfiles/ms/icons/yellow-dot.png',
     iconSize: [32, 32],
     iconAnchor: [16, 32]
-  });
+  })).current;
 
   useEffect(() => {
     const socket = new WebSocket('ws://83.149.105.190:8000/ws/location/?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6MTc1MjY0NDIzOCwiaWF0IjoxNzUyMjEyMjM4LCJqdGkiOiI3NGU1MzVmZmJiZDA0NWMyODIxMGM5ZDE5Nzk1OGFlMSIsInVzZXJfaWQiOjF9.4qE57fX2knUhKk-54sHa7IjFOdeE2pOTt5-C5btQ12I');
@@ -173,7 +172,7 @@ const Map = () => {
         const distanceUntilNow = totalDistance(agent.location_history.slice(0, idx + 1));
         const marker = L.marker([loc.latitude, loc.longitude], { icon: yellowIcon })
           .addTo(mapRef.current!)
-          .bindPopup(`<strong>To‘xtash nuqtasi</strong><br/>🧭 ${distanceUntilNow} km yurilgan`);
+          .bindPopup(`<strong>To&apos;xtash nuqtasi</strong><br/>🧭 ${distanceUntilNow} km yurilgan`);
         stopMarkersRef.current.push(marker);
       }
     });
@@ -198,19 +197,9 @@ const Map = () => {
         <div style="font-size: 16px; font-weight: bold;">${contract.client.full_name}</div>
       </div>
     </div>
-
-    <div style="margin-bottom: 8px;">
-      <strong>📄 Contract:</strong> ${contract.contract_number}
-    </div>
-
-    <div style="margin-bottom: 8px;">
-      <strong>🏢 Company:</strong>${contract.company.name}
-    </div>
-
-    <div style="margin-bottom: 12px;">
-      <strong>💰 Debt:</strong> <span style="color: green; font-weight: bold;"> ${contract.total_debt_1c.toLocaleString()} so'm</span>
-    </div>
-
+    <div style="margin-bottom: 8px;"><strong>📄 Contract:</strong> ${contract.contract_number}</div>
+    <div style="margin-bottom: 8px;"><strong>🏢 Company:</strong> ${contract.company.name}</div>
+    <div style="margin-bottom: 12px;"><strong>💰 Debt:</strong> <span style="color: green; font-weight: bold;"> ${contract.total_debt_1c.toLocaleString()} so'm</span></div>
     <button class="view-details-btn" 
       style="background: linear-gradient(to right, #4f46e5, #9333ea); color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%;"
       data-client='${JSON.stringify({
@@ -219,23 +208,19 @@ const Map = () => {
         debt: contract.total_debt_1c,
         company: contract.company.name,
         contract_number: contract.contract_number
-      })}'>
-      👁 View Details →
-    </button>
+      })}'>👁 View Details →</button>
   </div>
 `);
-
-
         clientMarkersRef.current.push(marker);
       });
     });
 
     mapRef.current.fitBounds(polylineRef.current.getBounds());
-  }, [selectedIndex, agents]);
+  }, [selectedIndex, agents, greenIcon, redIcon, yellowIcon]);
 
   useEffect(() => {
-    const handleClick = (e: any) => {
-      const target = e.target;
+    const handleClick = (e: Event) => {
+      const target = e.target as HTMLElement;
       if (target.classList.contains('view-details-btn')) {
         const data = target.getAttribute('data-client');
         if (data) setSelectedClient(JSON.parse(data));

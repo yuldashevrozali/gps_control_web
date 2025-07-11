@@ -1,7 +1,7 @@
 // components/ClientModal.tsx
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import Image from 'next/image';
 import { Client, ClientLocation } from '../lib/types'; // Turlarni import qiling
 
 interface ClientModalProps {
@@ -56,7 +56,7 @@ const ClientModal: React.FC<ClientModalProps> = ({ isOpen, onClose, clientData }
           </div>
 
           <div className="location-photo-container">
-            <img src={randomImageUrl} alt="Location photo" className="location-photo" />
+            <Image src={randomImageUrl} alt="Location photo" className="location-photo" />
           </div>
         </div>
       </div>

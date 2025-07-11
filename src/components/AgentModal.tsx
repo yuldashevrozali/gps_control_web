@@ -1,7 +1,7 @@
 // components/AgentModal.tsx
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import Image from 'next/image';
 import { Agent } from '../lib/types'; // Turlarni import qiling
 
 interface AgentModalProps {
@@ -83,7 +83,7 @@ const AgentModal: React.FC<AgentModalProps> = ({ isOpen, onClose, agentData }) =
                                 <p><strong>Name:</strong> {location.name || "N/A"}</p>
                                 <p><strong>Coordinates:</strong> {location.lat?.toFixed(6) || "N/A"}, {location.lon?.toFixed(6) || "N/A"}</p>
                                 {location.photo_url && (
-                                  <img
+                                  <Image
                                     src={location.photo_url.startsWith("http") ? location.photo_url : `${window.location.origin}${location.photo_url}`}
                                     alt="Location photo"
                                     className="location-photo"
