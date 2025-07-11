@@ -1,0 +1,202 @@
+[
+  {
+    "name": "Ali Karimov",
+    "phone_number": "+998901234567",
+    "is_working": true,
+    "locations": [
+      { "latitude": 41.3123, "longitude": 69.2786, "is_stop": false },
+      { "latitude": 41.3150, "longitude": 69.2800, "is_stop": true },
+      { "latitude": 41.3180, "longitude": 69.2820, "is_stop": false }
+    ]
+  },
+  {
+    "name": "Dilshod Rasulov",
+    "phone_number": "+998935678912",
+    "is_working": false,
+    "locations": [
+      { "latitude": 41.3199, "longitude": 69.2955, "is_stop": false },
+      { "latitude": 41.3220, "longitude": 69.2966, "is_stop": true },
+      { "latitude": 41.3245, "longitude": 69.2988, "is_stop": false }
+    ]
+  },
+  {
+    "name": "Madina Akramova",
+    "phone_number": "+998901112233",
+    "is_working": true,
+    "locations": [
+      { "latitude": 41.3100, "longitude": 69.2700, "is_stop": false },
+      { "latitude": 41.3122, "longitude": 69.2722, "is_stop": true },
+      { "latitude": 41.3144, "longitude": 69.2744, "is_stop": false }
+    ]
+  },
+  {
+    "name": "Bekzod Xolmatov",
+    "phone_number": "+998909876543",
+    "is_working": false,
+    "locations": [
+      { "latitude": 41.3080, "longitude": 69.2600, "is_stop": false },
+      { "latitude": 41.3095, "longitude": 69.2615, "is_stop": true },
+      { "latitude": 41.3109, "longitude": 69.2630, "is_stop": false }
+    ]
+  },
+  {
+    "name": "Zarnigor Raximova",
+    "phone_number": "+998939999000",
+    "is_working": true,
+    "locations": [
+      { "latitude": 41.3001, "longitude": 69.2500, "is_stop": false },
+      { "latitude": 41.3022, "longitude": 69.2522, "is_stop": true },
+      { "latitude": 41.3044, "longitude": 69.2544, "is_stop": false }
+    ]
+  },
+  {
+    "name": "Javlon Sattorov",
+    "phone_number": "+998933456789",
+    "is_working": false,
+    "locations": [
+      { "latitude": 41.3155, "longitude": 69.2789, "is_stop": false },
+      { "latitude": 41.3177, "longitude": 69.2801, "is_stop": true },
+      { "latitude": 41.3199, "longitude": 69.2812, "is_stop": false }
+    ]
+  },
+  {
+    "name": "Muhammadali Usmonov",
+    "phone_number": "+998998887766",
+    "is_working": true,
+    "locations": [
+      { "latitude": 41.2950, "longitude": 69.2400, "is_stop": false },
+      { "latitude": 41.2971, "longitude": 69.2421, "is_stop": true },
+      { "latitude": 41.2993, "longitude": 69.2442, "is_stop": false }
+    ]
+  },
+  {
+    "name": "Shahlo Nurmatova",
+    "phone_number": "+998917776655",
+    "is_working": false,
+    "locations": [
+      { "latitude": 41.2850, "longitude": 69.2300, "is_stop": false },
+      { "latitude": 41.2872, "longitude": 69.2322, "is_stop": true },
+      { "latitude": 41.2894, "longitude": 69.2344, "is_stop": false }
+    ]
+  },
+  {
+    "name": "Ravshan Xudoyberdiyev",
+    "phone_number": "+998932221100",
+    "is_working": true,
+    "locations": [
+      { "latitude": 41.2766, "longitude": 69.2200, "is_stop": false },
+      { "latitude": 41.2788, "longitude": 69.2222, "is_stop": true },
+      { "latitude": 41.2810, "longitude": 69.2244, "is_stop": false }
+    ]
+  },
+  {
+    "name": "Nigora Alimova",
+    "phone_number": "+998901234321",
+    "is_working": false,
+    "locations": [
+      { "latitude": 41.2666, "longitude": 69.2100, "is_stop": false },
+      { "latitude": 41.2688, "longitude": 69.2122, "is_stop": true },
+      { "latitude": 41.2710, "longitude": 69.2144, "is_stop": false }
+    ]
+  },
+  {
+    "name": "Xurshid Ziyayev",
+    "phone_number": "+998938888777",
+    "is_working": true,
+    "locations": [
+      { "latitude": 41.3500, "longitude": 69.3300, "is_stop": false },
+      { "latitude": 41.3522, "longitude": 69.3322, "is_stop": true },
+      { "latitude": 41.3544, "longitude": 69.3344, "is_stop": false }
+    ]
+  },
+  {
+    "name": "Lobar Saidova",
+    "phone_number": "+998912223344",
+    "is_working": false,
+    "locations": [
+      { "latitude": 41.3600, "longitude": 69.3400, "is_stop": false },
+      { "latitude": 41.3622, "longitude": 69.3422, "is_stop": true },
+      { "latitude": 41.3644, "longitude": 69.3444, "is_stop": false }
+    ]
+  },
+  {
+    "name": "Otabek Nazarov",
+    "phone_number": "+998900011223",
+    "is_working": true,
+    "locations": [
+      { "latitude": 41.3700, "longitude": 69.3500, "is_stop": false },
+      { "latitude": 41.3722, "longitude": 69.3522, "is_stop": true },
+      { "latitude": 41.3744, "longitude": 69.3544, "is_stop": false }
+    ]
+  },
+  {
+    "name": "Gulbahor Abdullaeva",
+    "phone_number": "+998917711122",
+    "is_working": false,
+    "locations": [
+      { "latitude": 41.3800, "longitude": 69.3600, "is_stop": false },
+      { "latitude": 41.3822, "longitude": 69.3622, "is_stop": true },
+      { "latitude": 41.3844, "longitude": 69.3644, "is_stop": false }
+    ]
+  },
+  {
+    "name": "Ilyos G'ulomov",
+    "phone_number": "+998907788990",
+    "is_working": true,
+    "locations": [
+      { "latitude": 41.3900, "longitude": 69.3700, "is_stop": false },
+      { "latitude": 41.3922, "longitude": 69.3722, "is_stop": true },
+      { "latitude": 41.3944, "longitude": 69.3744, "is_stop": false }
+    ]
+  },
+  {
+    "name": "Kamola Ergasheva",
+    "phone_number": "+998911133322",
+    "is_working": false,
+    "locations": [
+      { "latitude": 41.4000, "longitude": 69.3800, "is_stop": false },
+      { "latitude": 41.4022, "longitude": 69.3822, "is_stop": true },
+      { "latitude": 41.4044, "longitude": 69.3844, "is_stop": false }
+    ]
+  },
+  {
+    "name": "Botir Mardonov",
+    "phone_number": "+998935553311",
+    "is_working": true,
+    "locations": [
+      { "latitude": 41.4100, "longitude": 69.3900, "is_stop": false },
+      { "latitude": 41.4122, "longitude": 69.3922, "is_stop": true },
+      { "latitude": 41.4144, "longitude": 69.3944, "is_stop": false }
+    ]
+  },
+  {
+    "name": "Shoira Qayumova",
+    "phone_number": "+998908899776",
+    "is_working": false,
+    "locations": [
+      { "latitude": 41.4200, "longitude": 69.4000, "is_stop": false },
+      { "latitude": 41.4222, "longitude": 69.4022, "is_stop": true },
+      { "latitude": 41.4244, "longitude": 69.4044, "is_stop": false }
+    ]
+  },
+  {
+    "name": "Alisher G'oziyev",
+    "phone_number": "+998936661188",
+    "is_working": true,
+    "locations": [
+      { "latitude": 41.4300, "longitude": 69.4100, "is_stop": false },
+      { "latitude": 41.4322, "longitude": 69.4122, "is_stop": true },
+      { "latitude": 41.4344, "longitude": 69.4144, "is_stop": false }
+    ]
+  },
+  {
+    "name": "Nodira Rustamova",
+    "phone_number": "+998902211334",
+    "is_working": false,
+    "locations": [
+      { "latitude": 41.4400, "longitude": 69.4200, "is_stop": false },
+      { "latitude": 41.4422, "longitude": 69.4222, "is_stop": true },
+      { "latitude": 41.4444, "longitude": 69.4244, "is_stop": false }
+    ]
+  }
+]
