@@ -142,7 +142,6 @@ const Map = () => {
     if (selectedIndex === null || !mapRef.current || !agents[selectedIndex]) return;
 
     const agent = agents[selectedIndex];
-    const path = agent.location_history.map(loc => [loc.latitude, loc.longitude]);
 
     [polylineRef, startMarkerRef, endMarkerRef].forEach(ref => {
       if (ref.current) mapRef.current!.removeLayer(ref.current);
