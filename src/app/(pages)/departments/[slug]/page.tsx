@@ -24,7 +24,7 @@ export type Employee = {
   email: string;
   designation: string;
   type: string;
-  status: any;
+  status: string;
   department: string;
 };
 

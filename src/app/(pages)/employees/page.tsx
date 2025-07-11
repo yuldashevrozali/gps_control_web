@@ -232,13 +232,16 @@ const AllEmployees = () => {
                     </span>
                   )}
                 </TableCell>
-                <TableCell className="flex space-x-2">
-                  <Eye className="w-4 h-4 cursor-pointer hover:text-purple-600" />
-                  <Pencil
-                    className="w-4 h-4 cursor-pointer hover:text-yellow-500"
-                    onClick={() => openEditModal(agent)}
-                  />
-                </TableCell>
+                <TableCell>
+  <div className="flex items-center gap-2 h-full">
+    <Eye className="w-4 h-4 cursor-pointer hover:text-purple-600" />
+    <Pencil
+      className="w-4 h-4 cursor-pointer hover:text-yellow-500"
+      onClick={() => openEditModal(agent)}
+    />
+  </div>
+</TableCell>
+
               </TableRow>
             ))
           )}

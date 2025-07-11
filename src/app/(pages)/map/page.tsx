@@ -48,6 +48,15 @@ type Agent = {
   contracts?: Contract[];
 };
 
+type ClientPopupData = {
+  name: string;
+  phone: string;
+  debt: number;
+  company: string;
+  contract_number: string;
+};
+
+
 function calculateDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371;
   const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -78,7 +87,7 @@ const Map = () => {
   const mapRef = useRef<L.Map | null>(null);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [agents, setAgents] = useState<Agent[]>([]);
-  const [selectedClient, setSelectedClient] = useState<any>(null);
+  const [selectedClient, setSelectedClient] = useState<ClientPopupData>(null);
 
   const polylineRef = useRef<L.Polyline | null>(null);
   const startMarkerRef = useRef<L.Marker | null>(null);
