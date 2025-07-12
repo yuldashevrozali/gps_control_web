@@ -4,7 +4,6 @@
 import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import Link from "next/link";
 import toast from "react-hot-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Input } from "@/components/ui/input";
@@ -95,9 +94,7 @@ const Login = () => {
               Remember Me
             </label>
           </div>
-          <Link href='/forgotPassword' className='text-violet-500 my-2 mx-2'>
-            Forgot Password?
-          </Link>
+
         </div>
 
         <button
