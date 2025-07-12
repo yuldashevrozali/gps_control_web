@@ -82,7 +82,7 @@ function totalDistance(points: AgentLocation[]): number {
   return +total.toFixed(2);
 }
 
-const Map = () => {
+const MapHistory = () => {
   const mapRef = useRef<L.Map | null>(null);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [agents, setAgents] = useState<Agent[]>([]);
@@ -112,39 +112,20 @@ const Map = () => {
     iconAnchor: [16, 32]
   })).current;
 
- useEffect(() => {
-  const socket = new WebSocket(
-    'wss://gps.mxsoft.uz/ws/location/?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzUyMjU3MTIyLCJpYXQiOjE3NTIyNDk5MjIsImp0aSI6IjhiZTQxN2QxNDM1YTQ4Y2ViMmRkYTNhNWQ2ZmIyZThjIiwidXNlcl9pZCI6MX0.1pVay6BG8wj72Bk6f7F401Kt0LPHrYjWvO9paXqHNcc'
-  );
+  useEffect(() => {
+    const socket = new WebSocket('wss://gps.mxsoft.uz/ws/location/?token=TOKEN_HERE');
 
-  socket.onopen = () => {
-    console.log("✅ WebSocket muvaffaqiyatli ulandi");
-  };
+    socket.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        setAgents(data.agents_data);
+      } catch (err) {
+        console.error("WebSocket JSON parse error", err);
+      }
+    };
 
-  socket.onmessage = (event) => {
-    try {
-      const data = JSON.parse(event.data);
-      console.log("📨 WebSocket'dan kelgan ma'lumot:", data);
-      setAgents(data.agents_data);
-    } catch (err) {
-      console.error("❌ JSON parse xatosi:", err);
-    }
-  };
-
-  socket.onerror = (error) => {
-    console.error("🚨 WebSocket ulanishda xato:", error);
-  };
-
-  socket.onclose = (event) => {
-    console.warn(`🔌 WebSocket yopildi. Kod: ${event.code}, Sabab: ${event.reason || 'ko‘rsatilmagan'}`);
-  };
-
-  return () => {
-    console.log("🧹 WebSocket tozalanmoqda...");
-    socket.close();
-  };
-}, []);
-
+    return () => socket.close();
+  }, []);
 
   useEffect(() => {
     if (!mapRef.current) {
@@ -159,44 +140,39 @@ const Map = () => {
     if (selectedIndex === null || !mapRef.current || !agents[selectedIndex]) return;
 
     const agent = agents[selectedIndex];
-
     [polylineRef, startMarkerRef, endMarkerRef].forEach(ref => {
       if (ref.current) mapRef.current!.removeLayer(ref.current);
     });
-    stopMarkersRef.current.forEach(marker => mapRef.current?.removeLayer(marker));
+    stopMarkersRef.current.forEach(marker => mapRef.current!.removeLayer(marker));
     stopMarkersRef.current = [];
-    clientMarkersRef.current.forEach(marker => mapRef.current?.removeLayer(marker));
+    clientMarkersRef.current.forEach(marker => mapRef.current!.removeLayer(marker));
     clientMarkersRef.current = [];
-const latLngPath: L.LatLngTuple[] = agent.location_history.map(
-  (loc): L.LatLngTuple => [loc.latitude, loc.longitude]
-);
 
-polylineRef.current = L.polyline(latLngPath, { color: 'blue' }).addTo(mapRef.current);
+    const latLngPath: L.LatLngTuple[] = agent.location_history.map(
+      (loc): L.LatLngTuple => [loc.latitude, loc.longitude]
+    );
 
-const start: L.LatLngTuple = latLngPath[0];
-startMarkerRef.current = L.marker(start, { icon: greenIcon })
-  .addTo(mapRef.current)
-  .bindPopup(
-    `<strong>${agent.full_name}</strong><br/>📞 ${agent.phone_number}<br/>🟢 ${agent.is_working ? 'Ishlayapti' : 'Ishlamayapti'}`
-  )
-  .openPopup();
+    polylineRef.current = L.polyline(latLngPath, { color: 'blue' }).addTo(mapRef.current);
 
-const end: L.LatLngTuple = latLngPath[latLngPath.length - 1];
-const totalKm = totalDistance(agent.location_history);
+    const start = latLngPath[0];
+    startMarkerRef.current = L.marker(start, { icon: greenIcon })
+      .addTo(mapRef.current)
+      .bindPopup(`<strong>${agent.full_name}</strong><br/>📞 ${agent.phone_number}<br/>🟢 ${agent.is_working ? 'Ishlayapti' : 'Ishlamayapti'}`)
+      .openPopup();
 
-endMarkerRef.current = L.marker(end, { icon: redIcon })
-  .addTo(mapRef.current)
-  .bindPopup(
-    `<strong>Tugash nuqtasi</strong><br/>📞 ${agent.phone_number}<br/>📏 Umumiy masofa: ${totalKm} km`
-  );
+    const end = latLngPath[latLngPath.length - 1];
+    const totalKm = totalDistance(agent.location_history);
 
+    endMarkerRef.current = L.marker(end, { icon: redIcon })
+      .addTo(mapRef.current)
+      .bindPopup(`<strong>Tugash nuqtasi</strong><br/>📞 ${agent.phone_number}<br/>📏 Umumiy masofa: ${totalKm} km`);
 
     agent.location_history.forEach((loc, idx) => {
       if (loc.is_stop) {
         const distanceUntilNow = totalDistance(agent.location_history.slice(0, idx + 1));
         const marker = L.marker([loc.latitude, loc.longitude], { icon: yellowIcon })
           .addTo(mapRef.current!)
-          .bindPopup(`<strong>To&apos;xtash nuqtasi</strong><br/>🧭 ${distanceUntilNow} km yurilgan`);
+          .bindPopup(`<strong>To'xtash nuqtasi</strong><br/>🧭 ${distanceUntilNow} km yurilgan`);
         stopMarkersRef.current.push(marker);
       }
     });
@@ -288,4 +264,4 @@ endMarkerRef.current = L.marker(end, { icon: redIcon })
   );
 };
 
-export default Map;
+export default MapHistory;

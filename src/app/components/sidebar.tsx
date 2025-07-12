@@ -50,7 +50,7 @@ export const Sidebar = () => {
       name: "Map",
       defaultIcon: "/icons/jobs.svg",
       activeIcon: "/icons/jobs-active.svg",
-      href: "/map",
+      href: "/MapHistory",
     },
     {
       name: "Real Time Map",
