@@ -1,7 +1,9 @@
 // middleware.ts
 
-// Hamma narsani comment qilib test qil:
-export function middleware(request: any) {
+import { NextResponse } from 'next/server'; // <-- kerakli import
+import type { NextRequest } from 'next/server';
+
+export function middleware(request: NextRequest) {
   return NextResponse.next();
 }
 
