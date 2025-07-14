@@ -50,7 +50,7 @@ const AllEmployees = () => {
     if (wsRef.current) wsRef.current.close();
 
     const socket = new WebSocket(
-      "wss://gps.mxsoft.uz/ws/location/?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6MTc1Mjg5OTA2NiwiaWF0IjoxNzUyNDY3MDY2LCJqdGkiOiJjZWVkNGZjZGU2Y2I0MTZiYTgyNjgxM2ViNzRjN2I4OCIsInVzZXJfaWQiOjF9.w26E7DbV9F9RxUZKRYPYNWnF65fsd6xtvChIa0Hq4oE"
+      "wss://gps.mxsoft.uz/ws/location/?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzUyNTc0NzIyLCJpYXQiOjE3NTI0ODgzMjIsImp0aSI6IjhmNDI3YjQyZTY0ZTRlYWU4M2VhOWQyMGYxNTE2ZTM0IiwidXNlcl9pZCI6MX0.vPIjsefAklc5Tql9f6n0pAIkGCL9D_UCKQAmvfhCbfE"
     );
 
     wsRef.current = socket;
@@ -59,6 +59,8 @@ const AllEmployees = () => {
     socket.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
+        console.log(data,62);
+        
         if (data?.agents_data) {
           setAgents(data.agents_data);
           setFilteredAgents(data.agents_data);
@@ -106,49 +108,17 @@ const AllEmployees = () => {
     setNewPassword("");
   };
 
-const handlePasswordChange = async () => {
+  const handlePasswordChange = async () => {
   if (!selectedAgent) return;
-
   try {
     setLoading(true);
 
-    // 1. Refresh tokenni olamiz
-    const refreshToken = localStorage.getItem("refresh_token");
-    let accessToken: string | null = localStorage.getItem("access_token");
-
-    // 2. Agar access_token yo‘q bo‘lsa, refresh_token orqali yangisini olamiz
-    if (!accessToken && refreshToken) {
-      const res = await fetch("https://gps.mxsoft.uz/account/token/refresh/", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ refresh: refreshToken }),
-      });
-
-      if (!res.ok) {
-        toast.error("❌ Refresh token yaroqsiz");
-        return;
-      }
-
-      const data = await res.json();
-      accessToken = data.access;
-
-      if (accessToken) {
-        localStorage.setItem("access_token", accessToken);
-      } else {
-        toast.error("❌ Yangi tokenni olishda xatolik");
-        return;
-      }
-    }
-
-    // 3. accessToken hali ham yo‘q bo‘lsa — demak tizimdan chiqaramiz
-    if (!accessToken) {
+    const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzUyNTc0NzIyLCJpYXQiOjE3NTI0ODgzMjIsImp0aSI6IjhmNDI3YjQyZTY0ZTRlYWU4M2VhOWQyMGYxNTE2ZTM0IiwidXNlcl9pZCI6MX0.vPIjsefAklc5Tql9f6n0pAIkGCL9D_UCKQAmvfhCbfE";
+    if (!token) {
       toast.error("❌ Avtorizatsiya token topilmadi");
       return;
     }
 
-    // 4. Parolni o‘zgartirish so‘rovini yuboramiz
     await api.post(
       `/account/agent/${selectedAgent.id}/change-password/`,
       {
@@ -157,8 +127,9 @@ const handlePasswordChange = async () => {
       },
       {
         headers: {
-          Authorization: `Bearer ${accessToken}`,
+          Authorization: `Bearer ${token}`,
         },
+        
       }
     );
 
@@ -171,9 +142,6 @@ const handlePasswordChange = async () => {
     setLoading(false);
   }
 };
-
-
-
 
 
   return (
