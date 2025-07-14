@@ -107,22 +107,39 @@ const AllEmployees = () => {
   };
 
   const handlePasswordChange = async () => {
-    if (!selectedAgent) return;
-    try {
-      setLoading(true);
-      await api.post(`/account/agent/${selectedAgent.id}/change-password/`, {
+  if (!selectedAgent) return;
+  try {
+    setLoading(true);
+
+    const token = localStorage.getItem("access_token");
+    if (!token) {
+      toast.error("❌ Avtorizatsiya token topilmadi");
+      return;
+    }
+
+    await api.post(
+      `/account/agent/${selectedAgent.id}/change-password/`,
+      {
         new_password: newPassword,
         new_password_confirm: newPassword,
-      });
-      toast.success("✅ Parol o‘zgartirildi");
-      setIsModalOpen(false);
-    } catch (error) {
-      console.error("❌ Parolni almashtirishda xatolik:", error);
-      toast.error("❌ Parolni o‘zgartirishda muammo yuz berdi");
-    } finally {
-      setLoading(false);
-    }
-  };
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    toast.success("✅ Parol o‘zgartirildi");
+    setIsModalOpen(false);
+  } catch (error) {
+    console.error("❌ Parolni almashtirishda xatolik:", error);
+    toast.error("❌ Parolni o‘zgartirishda muammo yuz berdi");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
     <div className="border rounded-lg p-4 mt-4 overflow-x-auto">
