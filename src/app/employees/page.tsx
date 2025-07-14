@@ -72,7 +72,7 @@ const AllEmployees = () => {
   };
 
   const initializeTokenAndConnect = async () => {
-    let token = localStorage.getItem("access_token");
+    const token = localStorage.getItem("access_token");
     const refresh = localStorage.getItem("refresh_token");
 
     const isTokenExpired = (token: string) => {

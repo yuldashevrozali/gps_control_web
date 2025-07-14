@@ -8,11 +8,6 @@ import L, {
 } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
-interface LatLon {
-  lat: number;
-  lon: number;
-}
-
 interface Agent {
   id: number;
   full_name: string;
