@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef } from "react";
 import api from "../../../utils/api";
 import {
   Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow,
@@ -46,10 +46,13 @@ const AllEmployees = () => {
   const itemsPerPage = 10;
   const wsRef = useRef<WebSocket | null>(null);
 
-  const connectWebSocket = (token: string) => {
+  const connectWebSocket = () => {
     if (wsRef.current) wsRef.current.close();
 
-    const socket = new WebSocket(`wss://gps.mxsoft.uz/ws/location/?token=${token}`);
+    const socket = new WebSocket(
+      "wss://gps.mxsoft.uz/ws/location/?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6MTc1Mjg5OTA2NiwiaWF0IjoxNzUyNDY3MDY2LCJqdGkiOiJjZWVkNGZjZGU2Y2I0MTZiYTgyNjgxM2ViNzRjN2I4OCIsInVzZXJfaWQiOjF9.w26E7DbV9F9RxUZKRYPYNWnF65fsd6xtvChIa0Hq4oE"
+    );
+
     wsRef.current = socket;
 
     socket.onopen = () => console.log("✅ WebSocket ochildi");
@@ -69,54 +72,12 @@ const AllEmployees = () => {
     socket.onclose = () => console.log("🔌 WebSocket yopildi");
   };
 
-  const initializeTokenAndConnect = useCallback(async () => {
-    if (typeof window === "undefined") return;
-
-    const token = localStorage.getItem("access_token");
-    const refresh = localStorage.getItem("refresh_token");
-
-    const isTokenExpired = (token: string) => {
-      try {
-        const payload = JSON.parse(atob(token.split(".")[1]));
-        return payload.exp * 1000 < Date.now();
-      } catch {
-        return true;
-      }
-    };
-
-    if (token && !isTokenExpired(token)) {
-      connectWebSocket(token);
-    } else if (refresh) {
-      try {
-        const res = await fetch("https://gps.mxsoft.uz/account/token/refresh/", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ refresh }),
-        });
-
-        if (!res.ok) throw new Error("Tokenni yangilashda xatolik");
-
-        const data = await res.json();
-        if (data.access) {
-          localStorage.setItem("access_token", data.access);
-          connectWebSocket(data.access);
-        } else {
-          console.error("❌ Yangi access token olinmadi:", data);
-        }
-      } catch (error) {
-        console.error("❌ Token refresh xatoligi:", error);
-      }
-    } else {
-      console.warn("❗ Hech qanday token mavjud emas");
-    }
-  }, []);
-
   useEffect(() => {
-    initializeTokenAndConnect();
+    connectWebSocket();
     return () => {
       wsRef.current?.close();
     };
-  }, [initializeTokenAndConnect]);
+  }, []);
 
   useEffect(() => {
     const term = searchTerm.toLowerCase();
