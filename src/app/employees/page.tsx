@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import api from "../../../utils/api";
 import {
   Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow,
@@ -56,8 +56,6 @@ const AllEmployees = () => {
     socket.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        console.log(59,data);
-        
         if (data?.agents_data) {
           setAgents(data.agents_data);
           setFilteredAgents(data.agents_data);
@@ -71,7 +69,9 @@ const AllEmployees = () => {
     socket.onclose = () => console.log("🔌 WebSocket yopildi");
   };
 
-  const initializeTokenAndConnect = async () => {
+  const initializeTokenAndConnect = useCallback(async () => {
+    if (typeof window === "undefined") return;
+
     const token = localStorage.getItem("access_token");
     const refresh = localStorage.getItem("refresh_token");
 
@@ -109,14 +109,14 @@ const AllEmployees = () => {
     } else {
       console.warn("❗ Hech qanday token mavjud emas");
     }
-  };
+  }, []);
 
   useEffect(() => {
     initializeTokenAndConnect();
     return () => {
       wsRef.current?.close();
     };
-  }, []);
+  }, [initializeTokenAndConnect]);
 
   useEffect(() => {
     const term = searchTerm.toLowerCase();
