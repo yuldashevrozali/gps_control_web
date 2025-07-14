@@ -113,11 +113,13 @@ const MapHistory = () => {
   })).current;
 
   useEffect(() => {
-    const socket = new WebSocket('wss://gps.mxsoft.uz/ws/location/?token=TOKEN_HERE');
+    const socket = new WebSocket('wss://gps.mxsoft.uz/ws/location/?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6MTc1Mjg5OTA2NiwiaWF0IjoxNzUyNDY3MDY2LCJqdGkiOiJjZWVkNGZjZGU2Y2I0MTZiYTgyNjgxM2ViNzRjN2I4OCIsInVzZXJfaWQiOjF9.w26E7DbV9F9RxUZKRYPYNWnF65fsd6xtvChIa0Hq4oE');
 
     socket.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
+        console.log(data,121);
+        
         setAgents(data.agents_data);
       } catch (err) {
         console.error("WebSocket JSON parse error", err);

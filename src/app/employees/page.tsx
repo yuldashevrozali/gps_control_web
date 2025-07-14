@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import api from "../../../utils/api";
 import {
   Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow,
@@ -24,6 +24,7 @@ import {
 import { Label } from "@/components/ui/label";
 import toast from "react-hot-toast";
 
+// Token orqali oddiy WebSocket ulanishi (Bearer bilan)
 type Agent = {
   full_name: string;
   phone_number: string;
@@ -43,72 +44,80 @@ const AllEmployees = () => {
   const [newPassword, setNewPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const itemsPerPage = 10;
+  const wsRef = useRef<WebSocket | null>(null);
 
-  // 🔐 1. Saqlangan refresh_token
-  useEffect(() => {
-    localStorage.setItem("refresh_token", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6MTc1MjY4MDM1MSwiaWF0IjoxNzUyMjQ4MzUxLCJqdGkiOiIxOTE2NDhjY2E4ODU0NzJkOWMwYjNlNWM1NzNiNWU1ZSIsInVzZXJfaWQiOjF9.gv_viq_qNxvWDY3YB3yA4AHbffnNfE8EYal9hFI2dJs");
-  }, []);
+  const connectWebSocket = (token: string) => {
+    if (wsRef.current) wsRef.current.close();
 
-  // 🔌 2. WebSocket ulanishi
-  useEffect(() => {
-    const connectWebSocket = (token: string) => {
-      const socket = new WebSocket(`wss://gps.mxsoft.uz/ws/location/?token=${token}`);
+    const socket = new WebSocket(`wss://gps.mxsoft.uz/ws/location/?token=${token}`);
+    wsRef.current = socket;
 
-
-      socket.onopen = () => console.log("✅ WebSocket ochildi");
-      socket.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          if (data?.agents_data) {
-            setAgents(data.agents_data);
-            setFilteredAgents(data.agents_data);
-          }
-        } catch (error) {
-          console.error("❌ JSON parsing xatoligi:", error);
+    socket.onopen = () => console.log("✅ WebSocket ochildi");
+    socket.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        console.log(59,data);
+        
+        if (data?.agents_data) {
+          setAgents(data.agents_data);
+          setFilteredAgents(data.agents_data);
         }
-      };
-
-      socket.onerror = (error) => console.error("❌ WebSocket xatoligi:", error);
-      socket.onclose = () => console.log("🔌 WebSocket yopildi");
+      } catch (error) {
+        console.error("❌ JSON parsing xatoligi:", error);
+      }
     };
 
-    const token = localStorage.getItem("access_token");
+    socket.onerror = (error) => console.error("❌ WebSocket xatoligi:", error);
+    socket.onclose = () => console.log("🔌 WebSocket yopildi");
+  };
 
-    if (token) {
-      connectWebSocket(token);
-    } else {
-      const refresh = localStorage.getItem("refresh_token");
+  const initializeTokenAndConnect = async () => {
+    let token = localStorage.getItem("access_token");
+    const refresh = localStorage.getItem("refresh_token");
 
-      if (refresh) {
-        fetch("https://gps.mxsoft.uz/account/token/refresh/", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ refresh }),
-        })
-          .then((res) => {
-            if (!res.ok) throw new Error("Server javob bermadi");
-            return res.json();
-          })
-          .then((data) => {
-            if (data.access) {
-              localStorage.setItem("access_token", data.access);
-              connectWebSocket(data.access);
-            } else {
-              console.error("❌ Yangi access token olinmadi:", data);
-            }
-          })
-          .catch((err) => {
-            console.error("❌ Access tokenni yangilashda xatolik:", err.message);
-          });
-      } else {
-        console.warn("❗ refresh_token topilmadi.");
+    const isTokenExpired = (token: string) => {
+      try {
+        const payload = JSON.parse(atob(token.split(".")[1]));
+        return payload.exp * 1000 < Date.now();
+      } catch {
+        return true;
       }
+    };
+
+    if (token && !isTokenExpired(token)) {
+      connectWebSocket(token);
+    } else if (refresh) {
+      try {
+        const res = await fetch("https://gps.mxsoft.uz/account/token/refresh/", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ refresh }),
+        });
+
+        if (!res.ok) throw new Error("Tokenni yangilashda xatolik");
+
+        const data = await res.json();
+        if (data.access) {
+          localStorage.setItem("access_token", data.access);
+          connectWebSocket(data.access);
+        } else {
+          console.error("❌ Yangi access token olinmadi:", data);
+        }
+      } catch (error) {
+        console.error("❌ Token refresh xatoligi:", error);
+      }
+    } else {
+      console.warn("❗ Hech qanday token mavjud emas");
     }
+  };
+
+  useEffect(() => {
+    initializeTokenAndConnect();
+    return () => {
+      wsRef.current?.close();
+    };
   }, []);
 
-  // 🔍 3. Qidiruv
   useEffect(() => {
     const term = searchTerm.toLowerCase();
     const filtered = agents.filter(

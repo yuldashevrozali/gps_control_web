@@ -3,7 +3,7 @@ import axios from "axios";
 
 // axios instance yaratamiz
 const api = axios.create({
-  baseURL: "http://83.149.105.190:8000/",
+  baseURL: "https://gps.mxsoft.uz/",
   headers: {
     "Content-Type": "application/json",
   },
@@ -36,19 +36,24 @@ api.interceptors.response.use(
 
       const refreshToken = localStorage.getItem("refresh_token");
       if (!refreshToken) {
-        console.log("❌ Refresh token yoq.");
+        console.log("❌ Refresh token topilmadi.");
         return Promise.reject(error);
       }
 
       try {
         const res = await axios.post(
-          "http://83.149.105.190:8000/account/token/refresh/",
-          { refresh: refreshToken }
+          "https://gps.mxsoft.uz/account/token/refresh/",
+          { refresh: refreshToken },
+          {
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
         );
 
         const newAccessToken = res.data.access;
 
-        // Yangilangan access tokenni localStorage'ga saqlaymiz
+        // Yangi access tokenni localStorage'ga saqlaymiz
         localStorage.setItem("access_token", newAccessToken);
 
         // So‘rovga yangi tokenni qo‘shamiz

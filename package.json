@@ -48,6 +48,7 @@
     "react-hot-toast": "^2.5.2",
     "react-hydration-provider": "^2.1.0",
     "recharts": "^2.15.3",
+    "socket.io-client": "^4.8.1",
     "styled-components": "^6.1.18",
     "styled-jsx": "^5.1.7",
     "swr": "^2.3.3",
