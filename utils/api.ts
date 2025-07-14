@@ -12,16 +12,18 @@ const api = axios.create({
 // Har bir so‘rovga access token qo‘shish
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem("access_token");
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    if (typeof window !== "undefined") {
+      const token = localStorage.getItem("access_token");
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
     }
     return config;
   },
   (error) => Promise.reject(error)
 );
 
-// Agar token muddati tugagan bo‘lsa, refresh token orqali yangilaymiz
+// 401 xatolik bo‘lsa, tokenni yangilash
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -30,6 +32,7 @@ api.interceptors.response.use(
     if (
       error.response &&
       error.response.status === 401 &&
+      typeof window !== "undefined" &&
       !originalRequest._retry
     ) {
       originalRequest._retry = true;
@@ -45,24 +48,19 @@ api.interceptors.response.use(
           "https://gps.mxsoft.uz/account/token/refresh/",
           { refresh: refreshToken },
           {
-            headers: {
-              "Content-Type": "application/json",
-            },
+            headers: { "Content-Type": "application/json" },
           }
         );
 
         const newAccessToken = res.data.access;
 
-        // Yangi access tokenni localStorage'ga saqlaymiz
         localStorage.setItem("access_token", newAccessToken);
 
-        // So‘rovga yangi tokenni qo‘shamiz
-        api.defaults.headers.common["Authorization"] = `Bearer ${newAccessToken}`;
-        originalRequest.headers["Authorization"] = `Bearer ${newAccessToken}`;
-
-        return api(originalRequest); // So‘rovni qaytadan yuboramiz
+        // Yangi tokenni so‘rovga qo‘shamiz
+        originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+        return api(originalRequest);
       } catch (refreshError) {
-        console.log("❌ Refresh token ham muddati tugagan. Logout qilish kerak.");
+        console.log("❌ Refresh token ham yaroqsiz. Foydalanuvchini logout qilish kerak.");
         return Promise.reject(refreshError);
       }
     }
