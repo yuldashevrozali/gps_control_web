@@ -106,17 +106,49 @@ const AllEmployees = () => {
     setNewPassword("");
   };
 
-  const handlePasswordChange = async () => {
+const handlePasswordChange = async () => {
   if (!selectedAgent) return;
+
   try {
     setLoading(true);
 
-    const token = localStorage.getItem("access_token");
-    if (!token) {
+    // 1. Refresh tokenni olamiz
+    const refreshToken = localStorage.getItem("refresh_token");
+    let accessToken: string | null = localStorage.getItem("access_token");
+
+    // 2. Agar access_token yo‘q bo‘lsa, refresh_token orqali yangisini olamiz
+    if (!accessToken && refreshToken) {
+      const res = await fetch("https://gps.mxsoft.uz/account/token/refresh/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ refresh: refreshToken }),
+      });
+
+      if (!res.ok) {
+        toast.error("❌ Refresh token yaroqsiz");
+        return;
+      }
+
+      const data = await res.json();
+      accessToken = data.access;
+
+      if (accessToken) {
+        localStorage.setItem("access_token", accessToken);
+      } else {
+        toast.error("❌ Yangi tokenni olishda xatolik");
+        return;
+      }
+    }
+
+    // 3. accessToken hali ham yo‘q bo‘lsa — demak tizimdan chiqaramiz
+    if (!accessToken) {
       toast.error("❌ Avtorizatsiya token topilmadi");
       return;
     }
 
+    // 4. Parolni o‘zgartirish so‘rovini yuboramiz
     await api.post(
       `/account/agent/${selectedAgent.id}/change-password/`,
       {
@@ -125,7 +157,7 @@ const AllEmployees = () => {
       },
       {
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${accessToken}`,
         },
       }
     );
@@ -139,6 +171,9 @@ const AllEmployees = () => {
     setLoading(false);
   }
 };
+
+
+
 
 
   return (
