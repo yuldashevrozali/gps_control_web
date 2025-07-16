@@ -146,15 +146,6 @@ const RealTimeMap: React.FC = () => {
     return () => socket.close();
   }, [agentPaths]);
 
-  const handleClear = () => {
-    localStorage.removeItem('agentPaths');
-    setAgentPaths({});
-    polylineRef.current?.remove();
-    Object.values(startMarkersMap.current).forEach(marker => marker.remove());
-    startMarkersMap.current = {};
-    stopMarkersRef.current.forEach(marker => marker.remove());
-    stopMarkersRef.current = [];
-  };
 
   return (
     <div>
@@ -169,19 +160,6 @@ const RealTimeMap: React.FC = () => {
         ))}
       </select>
 
-      <button
-        onClick={handleClear}
-        style={{
-          margin: '10px',
-          padding: '5px 10px',
-          backgroundColor: 'red',
-          color: 'white',
-          borderRadius: '4px',
-          cursor: 'pointer',
-        }}
-      >
-        Ishni tugatish
-      </button>
 
       <div id="map" style={{ height: '500px', width: '100%' }} suppressHydrationWarning />
     </div>

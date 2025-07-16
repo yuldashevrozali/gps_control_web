@@ -29,12 +29,6 @@ export const Sidebar = () => {
       href: "/employees",
     },
     {
-      name: "All Departments",
-      defaultIcon: "/icons/departments.svg",
-      activeIcon: "/icons/departments-active.svg",
-      href: "/departments",
-    },
-    {
       name: "Attendance",
       defaultIcon: "/icons/attendence.svg",
       activeIcon: "/icons/attendence-active.svg",

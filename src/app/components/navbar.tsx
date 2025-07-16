@@ -55,13 +55,6 @@ export const Navbar = () => {
         breadcrumbs: undefined,
       };
     }
-    if (pathname === "/departments") {
-      return {
-        greeting: "All Departments",
-        subtitle: "All Departments Information",
-        breadcrumbs: undefined,
-      };
-    }
     return {
       greeting: "Welcome",
       subtitle: "Overview",

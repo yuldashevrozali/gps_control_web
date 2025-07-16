@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import toast from "react-hot-toast";
+import { getValidAccessToken } from "../../../utils/auth";
 
 // Token orqali oddiy WebSocket ulanishi (Bearer bilan)
 type Agent = {
@@ -46,33 +47,42 @@ const AllEmployees = () => {
   const itemsPerPage = 10;
   const wsRef = useRef<WebSocket | null>(null);
 
-  const connectWebSocket = () => {
-    if (wsRef.current) wsRef.current.close();
+async function connectWebSocket() {
+  const token = await getValidAccessToken();
 
-    const socket = new WebSocket(
-      "wss://gps.mxsoft.uz/ws/location/?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzUyNTc0NzIyLCJpYXQiOjE3NTI0ODgzMjIsImp0aSI6IjhmNDI3YjQyZTY0ZTRlYWU4M2VhOWQyMGYxNTE2ZTM0IiwidXNlcl9pZCI6MX0.vPIjsefAklc5Tql9f6n0pAIkGCL9D_UCKQAmvfhCbfE"
-    );
+  if (!token) {
+    console.error("❌ Access token yo‘q. WebSocket ulanmaydi.");
+    return;
+  }
 
-    wsRef.current = socket;
+  const socket = new WebSocket(`wss://gps.mxsoft.uz/ws/location/?token=${token}`);
+  wsRef.current = socket;
 
-    socket.onopen = () => console.log("✅ WebSocket ochildi");
-    socket.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        console.log(data,62);
-        
-        if (data?.agents_data) {
-          setAgents(data.agents_data);
-          setFilteredAgents(data.agents_data);
-        }
-      } catch (error) {
-        console.error("❌ JSON parsing xatoligi:", error);
+  socket.onopen = () => console.log("✅ WebSocket ochildi");
+
+  socket.onmessage = (event) => {
+    try {
+      const data = JSON.parse(event.data);
+
+      if (data?.agents_data) {
+        console.log("📥 Agents:", data.agents_data); // ✅ log uchun
+        setAgents(data.agents_data); // ✅ Agentlar holatini yangilash
+        setFilteredAgents(data.agents_data); // ✅ Filtirlangan agentlarni ham
       }
-    };
-
-    socket.onerror = (error) => console.error("❌ WebSocket xatoligi:", error);
-    socket.onclose = () => console.log("🔌 WebSocket yopildi");
+    } catch (err) {
+      console.error("❌ JSON parse error:", err);
+    }
   };
+
+  socket.onerror = (err) => {
+    console.error("❌ WebSocket xatolik:", err);
+  };
+
+  socket.onclose = () => {
+    console.log("🔌 WebSocket yopildi");
+  };
+}
+
 
   useEffect(() => {
     connectWebSocket();
@@ -109,40 +119,37 @@ const AllEmployees = () => {
   };
 
   const handlePasswordChange = async () => {
-  if (!selectedAgent) return;
-  try {
-    setLoading(true);
-
-    const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzUyNTc0NzIyLCJpYXQiOjE3NTI0ODgzMjIsImp0aSI6IjhmNDI3YjQyZTY0ZTRlYWU4M2VhOWQyMGYxNTE2ZTM0IiwidXNlcl9pZCI6MX0.vPIjsefAklc5Tql9f6n0pAIkGCL9D_UCKQAmvfhCbfE";
-    if (!token) {
-      toast.error("❌ Avtorizatsiya token topilmadi");
-      return;
-    }
-
-    await api.post(
-      `/account/agent/${selectedAgent.id}/change-password/`,
-      {
-        new_password: newPassword,
-        new_password_confirm: newPassword,
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        
+    if (!selectedAgent) return;
+    try {
+      setLoading(true);
+      const token = await getValidAccessToken();
+      if (!token) {
+        toast.error("❌ Avtorizatsiya token topilmadi");
+        return;
       }
-    );
 
-    toast.success("✅ Parol o‘zgartirildi");
-    setIsModalOpen(false);
-  } catch (error) {
-    console.error("❌ Parolni almashtirishda xatolik:", error);
-    toast.error("❌ Parolni o‘zgartirishda muammo yuz berdi");
-  } finally {
-    setLoading(false);
-  }
-};
+      await api.post(
+        `/account/agent/${selectedAgent.id}/change-password/`,
+        {
+          new_password: newPassword,
+          new_password_confirm: newPassword,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
+      toast.success("✅ Parol o‘zgartirildi");
+      setIsModalOpen(false);
+    } catch (error) {
+      console.error("❌ Parolni almashtirishda xatolik:", error);
+      toast.error("❌ Parolni o‘zgartirishda muammo yuz berdi");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="border rounded-lg p-4 mt-4 overflow-x-auto">

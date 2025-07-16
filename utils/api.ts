@@ -1,7 +1,7 @@
 // src/utils/api.ts
 import axios from "axios";
+import { getValidAccessToken } from "./auth";
 
-// axios instance yaratamiz
 const api = axios.create({
   baseURL: "https://gps.mxsoft.uz/",
   headers: {
@@ -9,11 +9,11 @@ const api = axios.create({
   },
 });
 
-// Har bir so‘rovga access token qo‘shish
+// Request interceptor: har bir so‘rovga access token qo‘shiladi
 api.interceptors.request.use(
-  (config) => {
+  async (config) => {
     if (typeof window !== "undefined") {
-      const token = localStorage.getItem("access_token");
+      const token = await getValidAccessToken();
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
@@ -23,23 +23,22 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// 401 xatolik bo‘lsa, tokenni yangilash
+// Response interceptor: agar 401 bo‘lsa, tokenni refresh qiladi
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
 
     if (
-      error.response &&
-      error.response.status === 401 &&
-      typeof window !== "undefined" &&
-      !originalRequest._retry
+      error.response?.status === 401 &&
+      !originalRequest._retry &&
+      typeof window !== "undefined"
     ) {
       originalRequest._retry = true;
 
       const refreshToken = localStorage.getItem("refresh_token");
       if (!refreshToken) {
-        console.log("❌ Refresh token topilmadi.");
+        console.warn("❌ Refresh token yo‘q. Login kerak.");
         return Promise.reject(error);
       }
 
@@ -47,21 +46,17 @@ api.interceptors.response.use(
         const res = await axios.post(
           "https://gps.mxsoft.uz/account/token/refresh/",
           { refresh: refreshToken },
-          {
-            headers: { "Content-Type": "application/json" },
-          }
+          { headers: { "Content-Type": "application/json" } }
         );
 
         const newAccessToken = res.data.access;
-
         localStorage.setItem("access_token", newAccessToken);
 
-        // Yangi tokenni so‘rovga qo‘shamiz
         originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
         return api(originalRequest);
-      } catch (refreshError) {
-        console.log("❌ Refresh token ham yaroqsiz. Foydalanuvchini logout qilish kerak.");
-        return Promise.reject(refreshError);
+      } catch (err) {
+        console.log("❌ Refresh token ham muddati tugagan.");
+        return Promise.reject(err);
       }
     }
 
