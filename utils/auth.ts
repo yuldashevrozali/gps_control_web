@@ -78,7 +78,7 @@ export async function getValidAccessToken(): Promise<string | null> {
           console.warn("⚠️ Refresh token eskirgan yoki blacklistga tushgan. Login orqali yangilanadi...");
 
           // 👇 Hardcoded fallback user
-          const phone_number = "+998901791459";
+          const phone_number = "+998973433006";
           const password = "salom123";
 
           const loggedIn = await loginUser(phone_number, password);

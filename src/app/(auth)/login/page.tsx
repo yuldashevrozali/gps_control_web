@@ -56,7 +56,7 @@ const Login = () => {
           <Input
             type='tel'
             required
-            placeholder='+998901791459'
+            placeholder='+998901234567'
             {...register("phone_number")}
             className='w-full h-13 px-4 py-3 border border-violet-500 rounded-2xl focus:outline-none focus:ring-2 focus:ring-violet-500 text-foreground'
           />
