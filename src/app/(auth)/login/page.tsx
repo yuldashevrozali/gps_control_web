@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { loginSchema, LoginFormValues } from "../schemas/loginSchema";
 import { Checkbox } from "@/components/ui/checkbox";
 import icon from "../../../../public/img/logo.svg";
+import { loginUser } from "../../../../utils/auth";
 
 const Login = () => {
   const {
@@ -33,6 +34,7 @@ const Login = () => {
       document.cookie = "loggedIn=true; path=/; max-age=86400; SameSite=Lax; Secure"; // Added SameSite and Secure for better practice
 
       toast.success("✅ Muvaffaqiyatli kirdingiz!");
+      loginUser()
       router.push("/dashboard");
     } else {
       toast.error("❌ Email yoki parol noto‘g‘ri!");
