@@ -10,13 +10,26 @@ import {
   TableCell,
 } from "@/components/ui/table";
 
+// Payment type
+interface Payment {
+  id: number;
+  processed_by_name: string;
+  contract_number: string;
+  amount: string;
+  paid_at: string;
+  method: string;
+  is_successful: boolean;
+  company_id: number;
+  client_id: number;
+  note: number | null;
+}
+
 const Payroll = () => {
-  const [data, setData] = useState<any[]>([]);
+  const [data, setData] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const token = localStorage.getItem("access_token");
-
     if (!token) return;
 
     fetch("https://gps.mxsoft.uz/payments/lists/?page=1", {
@@ -39,9 +52,9 @@ const Payroll = () => {
       <h2 className="text-2xl font-bold mb-4">🧾 Payments Table</h2>
 
       {loading ? (
-        <p>⏳ Yuklanmoqda...</p>
+        <p>⏳ Yuklanmoqda&hellip;</p>
       ) : data.length === 0 ? (
-        <p>🚫 Ma'lumot topilmadi</p>
+        <p>🚫 Ma&#39;lumot topilmadi</p>
       ) : (
         <div className="overflow-x-auto border rounded-lg">
           <Table className="w-full text-sm border-collapse border border-gray-300">
@@ -63,7 +76,7 @@ const Payroll = () => {
                 <TableRow key={item.id}>
                   <TableCell className="border border-gray-300">{item.processed_by_name}</TableCell>
                   <TableCell className="border border-gray-300">{item.contract_number}</TableCell>
-                  <TableCell className="border border-gray-300">{item.amount} sum</TableCell>
+                  <TableCell className="border border-gray-300">{item.amount} so'm</TableCell>
                   <TableCell className="border border-gray-300">
                     {new Date(item.paid_at).toLocaleString("uz-UZ", {
                       year: "numeric",
@@ -74,10 +87,10 @@ const Payroll = () => {
                     })}
                   </TableCell>
                   <TableCell className="border border-gray-300">{item.method}</TableCell>
-                  <TableCell className="border border-gray-300">{item.is_successful ? "Ha" : "Yo'q"}</TableCell>
+                  <TableCell className="border border-gray-300">{item.is_successful ? "Ha" : "Yo&#39;q"}</TableCell>
                   <TableCell className="border border-gray-300">{item.company_id}</TableCell>
                   <TableCell className="border border-gray-300">{item.client_id}</TableCell>
-                  <TableCell className="border border-gray-300">{item.note ?? "Yo'q"}</TableCell>
+                  <TableCell className="border border-gray-300">{item.note ?? "Yo&#39;q"}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
