@@ -5,10 +5,12 @@ import axios from "axios";
 export async function loginUser(phone_number: string, password: string): Promise<boolean> {
   try {
     const response = await axios.post(
-      "https://gps.mxsoft.uz/account/token/",
+      "https://gps.mxsoft.uz/account/login/",
       {
         phone_number,
         password,
+        device_id: "salom", // 🔒 har doim shunaqa yuboriladi
+        firebase_token: "string", // 🔒 har doim shunaqa yuboriladi
       },
       {
         headers: {
@@ -23,15 +25,15 @@ export async function loginUser(phone_number: string, password: string): Promise
       localStorage.setItem("access_token", access);
       localStorage.setItem("refresh_token", refresh);
       document.cookie = "loggedIn=true; path=/; max-age=86400; SameSite=Lax; Secure";
-      console.log("✅ Access va refresh tokenlar saqlandi");
+      console.log("✅ Login muvaffaqiyatli, tokenlar saqlandi");
       return true;
     }
 
-    console.warn("⚠️ Tokenlar olinmadi");
+    console.warn("⚠️ Tokenlar qaytmadi");
     return false;
-  } catch (error: unknown) {
+  } catch (error: any) {
     if (axios.isAxiosError(error)) {
-      console.error("❌ Login xatolik:", error.response?.data || error.message);
+      console.error("❌ Login xatosi:", error.response?.data || error.message);
     } else {
       console.error("❌ Noma'lum xatolik:", error);
     }

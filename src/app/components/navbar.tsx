@@ -63,9 +63,18 @@ export const Navbar = () => {
 
   const headerProps = getHeaderProps();
 
-  const handleLogout = () => {
-    router.push("/login");
-  };
+ const handleLogout = () => {
+  // 🔒 Tokenlarni va cookie'ni tozalash
+  localStorage.removeItem("access_token");
+  localStorage.removeItem("refresh_token");
+
+  // 🧹 Cookie'ni tozalash (1 soniyada muddati tugaydi)
+  document.cookie = "loggedIn=; path=/; max-age=0";
+
+  // ⏩ Login sahifasiga yo‘naltirish
+  router.push("/login");
+};
+  
 
   return (
     <div className='flex items-center h-[9vh] fixed top-0 left-0 lg:left-64 right-0 z-30 bg-background px-4 sm:px-6'>
