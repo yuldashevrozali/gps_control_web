@@ -1,20 +1,15 @@
 // src/utils/auth.ts
 import axios from "axios";
 
-/**
- * Login qilish: access_token va refresh_token ni localStorage ga saqlaydi.
- */
-export async function loginUser(): Promise<boolean> {
+// 🔐 Asosiy login funksiyasi (phone_number va password orqali)
+export async function loginUser(phone_number: string, password: string): Promise<boolean> {
   try {
-    const refresh = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6MTc1MzI2ODUyMSwiaWF0IjoxNzUyNjYzNzIxLCJqdGkiOiI5NzI0NTY4MTcyNzE0NzZhODIzMWIyMTQ1MDg5NjAxNCIsInVzZXJfaWQiOjEsInVzZXJfdHlwZSI6Ik1BTkFHRVIiLCJmdWxsX25hbWUiOiJOb25lIE5vbmUiLCJwaG9uZV9udW1iZXIiOiIrOTk4OTAxNzkxNDU5In0.2Wh7hTTuZSUq7exwvGPgihdvRU7GtkWVmhMsUH_xMrc'; // siz bergan token
-
-    // Avval localStorage ga refresh_token ni saqlaymiz
-    localStorage.setItem("refresh_token", refresh);
-
-    // Endi ushbu refresh token orqali access tokenni serverdan so'raymiz
     const response = await axios.post(
-      "https://gps.mxsoft.uz/account/token/refresh/",
-      { refresh },
+      "https://gps.mxsoft.uz/account/token/",
+      {
+        phone_number,
+        password,
+      },
       {
         headers: {
           "Content-Type": "application/json",
@@ -22,15 +17,17 @@ export async function loginUser(): Promise<boolean> {
       }
     );
 
-    const access = response.data.access;
+    const { access, refresh } = response.data;
 
-    if (access) {
+    if (access && refresh) {
       localStorage.setItem("access_token", access);
-      console.log("✅ Tokenlar saqlandi");
+      localStorage.setItem("refresh_token", refresh);
+      document.cookie = "loggedIn=true; path=/; max-age=86400; SameSite=Lax; Secure";
+      console.log("✅ Access va refresh tokenlar saqlandi");
       return true;
     }
 
-    console.warn("⚠️ Access tokenni olishda muammo");
+    console.warn("⚠️ Tokenlar olinmadi");
     return false;
   } catch (error: unknown) {
     if (axios.isAxiosError(error)) {
@@ -42,10 +39,7 @@ export async function loginUser(): Promise<boolean> {
   }
 }
 
-
-/**
- * access_token ni tekshiradi, yo'q bo‘lsa refresh_token orqali yangilaydi.
- */
+// 🔄 Valid access_token olish logikasi
 export async function getValidAccessToken(): Promise<string | null> {
   const access = localStorage.getItem("access_token");
   const refresh = localStorage.getItem("refresh_token");
@@ -64,17 +58,36 @@ export async function getValidAccessToken(): Promise<string | null> {
         }
       );
 
-      const newAccess = response.data.access;
-      if (newAccess) {
+      const { access: newAccess, refresh: newRefresh } = response.data;
+
+      if (newAccess && newRefresh) {
         localStorage.setItem("access_token", newAccess);
+        localStorage.setItem("refresh_token", newRefresh);
+        console.log("🔄 Tokenlar yangilandi");
         return newAccess;
-      } else {
-        console.warn("⚠️ Yangilangan access token topilmadi");
-        return null;
       }
-    } catch (error: unknown) {
+
+      console.warn("⚠️ Yangilangan tokenlar topilmadi");
+      return null;
+    } catch (error: any) {
       if (axios.isAxiosError(error)) {
-        console.error("❌ Token yangilashda xatolik:", error.response?.data || error.message);
+        const status = error.response?.status;
+        const isBlacklisted = error.response?.data?.detail?.toLowerCase?.().includes("blacklisted");
+
+        if (status === 401 || isBlacklisted) {
+          console.warn("⚠️ Refresh token eskirgan yoki blacklistga tushgan. Login orqali yangilanadi...");
+
+          // 👇 Hardcoded fallback user
+          const phone_number = "+998901791459";
+          const password = "salom123";
+
+          const loggedIn = await loginUser(phone_number, password);
+          if (loggedIn) {
+            return localStorage.getItem("access_token");
+          }
+        }
+
+        console.error("❌ Token yangilash xatosi:", error.response?.data || error.message);
       } else {
         console.error("❌ Noma'lum xatolik:", error);
       }
@@ -86,10 +99,10 @@ export async function getValidAccessToken(): Promise<string | null> {
   return null;
 }
 
-/**
- * Logout qilish funksiyasi.
- */
+// 🚪 Logout qilish funksiyasi
 export function logoutUser() {
   localStorage.removeItem("access_token");
   localStorage.removeItem("refresh_token");
+  document.cookie = "loggedIn=; path=/; max-age=0";
+  console.log("🔒 Logout bajarildi");
 }

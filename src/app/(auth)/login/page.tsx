@@ -25,19 +25,13 @@ const Login = () => {
   const router = useRouter();
 
   const onSubmit = async (data: LoginFormValues) => {
-    const correctEmail = "yuldashevrozali08@gmail.com";
-    const correctPassword = "salom123";
+    const success = await loginUser(data.phone_number, data.password);
 
-    if (data.email === correctEmail && data.password === correctPassword) {
-      // ✅ Cookie saqlash (1 kun = 86400 soniya)
-      // Ensure this cookie is set correctly
-      document.cookie = "loggedIn=true; path=/; max-age=86400; SameSite=Lax; Secure"; // Added SameSite and Secure for better practice
-
+    if (success) {
       toast.success("✅ Muvaffaqiyatli kirdingiz!");
-      loginUser()
       router.push("/dashboard");
     } else {
-      toast.error("❌ Email yoki parol noto‘g‘ri!");
+      toast.error("❌ Telefon raqam yoki parol noto‘g‘ri!");
     }
   };
 
@@ -57,16 +51,17 @@ const Login = () => {
       >
         <div>
           <label className='block text-sm text-muted-foreground mb-1'>
-            Email Address
+            Phone Number
           </label>
           <Input
-            type='email'
+            type='tel'
             required
-            {...register("email")}
+            placeholder='+998901791459'
+            {...register("phone_number")}
             className='w-full h-13 px-4 py-3 border border-violet-500 rounded-2xl focus:outline-none focus:ring-2 focus:ring-violet-500 text-foreground'
           />
-          {errors.email && (
-            <p className='text-red-500 text-sm mt-1'>{errors.email.message}</p>
+          {errors.phone_number && (
+            <p className='text-red-500 text-sm mt-1'>{errors.phone_number.message}</p>
           )}
         </div>
 
@@ -90,10 +85,7 @@ const Login = () => {
         <div className='flex justify-between items-center'>
           <div className='flex items-center space-x-2'>
             <Checkbox id='terms' />
-            <label
-              htmlFor='terms'
-              className='text-sm leading-none peer-disabled:cursor-not-allowed '
-            >
+            <label htmlFor='terms' className='text-sm leading-none'>
               Remember Me
             </label>
           </div>

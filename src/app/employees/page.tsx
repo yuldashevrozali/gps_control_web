@@ -24,6 +24,7 @@ import {
 import { Label } from "@/components/ui/label";
 import toast from "react-hot-toast";
 import { getValidAccessToken } from "../../../utils/auth";
+import { useRouter } from "next/navigation";
 
 type Agent = {
   full_name: string;
@@ -33,6 +34,13 @@ type Agent = {
   user_type_display: string;
   type?: string;
 };
+
+  function getCookie(name: string): string | null {
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) return parts.pop()?.split(";").shift() || null;
+  return null;
+}
 
 const AllEmployees = () => {
   const [agents, setAgents] = useState<Agent[]>([]);
@@ -45,6 +53,16 @@ const AllEmployees = () => {
   const [loading, setLoading] = useState(false);
   const itemsPerPage = 10;
   const wsRef = useRef<WebSocket | null>(null);
+  const router = useRouter();
+
+   useEffect(() => {
+      const isLoggedIn = getCookie("loggedIn");
+      if (isLoggedIn !== "true") {
+        router.push("/login");
+      }
+    }, []);
+
+
 
   useEffect(() => {
     async function setupSocket() {
