@@ -76,7 +76,7 @@ const Payroll = () => {
                 <TableRow key={item.id}>
                   <TableCell className="border border-gray-300">{item.processed_by_name}</TableCell>
                   <TableCell className="border border-gray-300">{item.contract_number}</TableCell>
-                  <TableCell className="border border-gray-300">{item.amount} so'm</TableCell>
+                  <TableCell className="border border-gray-300">{item.amount} som</TableCell>
                   <TableCell className="border border-gray-300">
                     {new Date(item.paid_at).toLocaleString("uz-UZ", {
                       year: "numeric",
