@@ -6,7 +6,7 @@ import axios from "axios";
  */
 export async function loginUser(): Promise<boolean> {
   try {
-    const refresh = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6MTc1MzI2NzA4MywiaWF0IjoxNzUyNjYyMjgzLCJqdGkiOiJjOThiZGRjZDUwNmU0OTczODhiNjdkYzBiYzk2YmFmYiIsInVzZXJfaWQiOjEsInVzZXJfdHlwZSI6Ik1BTkFHRVIiLCJmdWxsX25hbWUiOiJOb25lIE5vbmUiLCJwaG9uZV9udW1iZXIiOiIrOTk4OTAxNzkxNDU5In0.rzOT2IqGxepwqzwqZmAvs74WPxLfEFGYthvbYN36N3s'; // siz bergan token
+    const refresh = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6MTc1MzI2ODUyMSwiaWF0IjoxNzUyNjYzNzIxLCJqdGkiOiI5NzI0NTY4MTcyNzE0NzZhODIzMWIyMTQ1MDg5NjAxNCIsInVzZXJfaWQiOjEsInVzZXJfdHlwZSI6Ik1BTkFHRVIiLCJmdWxsX25hbWUiOiJOb25lIE5vbmUiLCJwaG9uZV9udW1iZXIiOiIrOTk4OTAxNzkxNDU5In0.2Wh7hTTuZSUq7exwvGPgihdvRU7GtkWVmhMsUH_xMrc'; // siz bergan token
 
     // Avval localStorage ga refresh_token ni saqlaymiz
     localStorage.setItem("refresh_token", refresh);
