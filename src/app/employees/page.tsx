@@ -25,7 +25,6 @@ import { Label } from "@/components/ui/label";
 import toast from "react-hot-toast";
 import { getValidAccessToken } from "../../../utils/auth";
 
-// Token orqali oddiy WebSocket ulanishi (Bearer bilan)
 type Agent = {
   full_name: string;
   phone_number: string;
@@ -47,45 +46,44 @@ const AllEmployees = () => {
   const itemsPerPage = 10;
   const wsRef = useRef<WebSocket | null>(null);
 
-async function connectWebSocket() {
-  const token = await getValidAccessToken();
-
-  if (!token) {
-    console.error("❌ Access token yo‘q. WebSocket ulanmaydi.");
-    return;
-  }
-
-  const socket = new WebSocket(`wss://gps.mxsoft.uz/ws/location/?token=${token}`);
-  wsRef.current = socket;
-
-  socket.onopen = () => console.log("✅ WebSocket ochildi");
-
-  socket.onmessage = (event) => {
-    try {
-      const data = JSON.parse(event.data);
-
-      if (data?.agents_data) {
-        console.log("📥 Agents:", data.agents_data); // ✅ log uchun
-        setAgents(data.agents_data); // ✅ Agentlar holatini yangilash
-        setFilteredAgents(data.agents_data); // ✅ Filtirlangan agentlarni ham
-      }
-    } catch (err) {
-      console.error("❌ JSON parse error:", err);
-    }
-  };
-
-  socket.onerror = (err) => {
-    console.error("❌ WebSocket xatolik:", err);
-  };
-
-  socket.onclose = () => {
-    console.log("🔌 WebSocket yopildi");
-  };
-}
-
-
   useEffect(() => {
-    connectWebSocket();
+    async function setupSocket() {
+      const token = await getValidAccessToken();
+
+      if (!token) {
+        console.error("❌ Access token yo‘q. WebSocket ulanmaydi.");
+        return;
+      }
+
+      const socket = new WebSocket(`wss://gps.mxsoft.uz/ws/location/?token=${token}`);
+      wsRef.current = socket;
+
+      socket.onopen = () => console.log("✅ WebSocket ochildi");
+
+      socket.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data?.agents_data) {
+            console.log("📥 Agents:", data.agents_data);
+            setAgents(data.agents_data);
+            setFilteredAgents(data.agents_data);
+          }
+        } catch (err) {
+          console.error("❌ JSON parse error:", err);
+        }
+      };
+
+      socket.onerror = (err) => {
+        console.error("❌ WebSocket xatolik:", err);
+      };
+
+      socket.onclose = () => {
+        console.log("🔌 WebSocket yopildi");
+      };
+    }
+
+    setupSocket();
+
     return () => {
       wsRef.current?.close();
     };
@@ -153,7 +151,6 @@ async function connectWebSocket() {
 
   return (
     <div className="border rounded-lg p-4 mt-4 overflow-x-auto">
-      {/* 🔎 Qidiruv va filter */}
       <div className="flex flex-col gap-4 md:flex-row md:justify-between mb-6">
         <div className="w-full md:w-72 relative">
           <Input
@@ -180,7 +177,6 @@ async function connectWebSocket() {
         </div>
       </div>
 
-      {/* 🧾 Jadval */}
       <Table>
         <TableHeader>
           <TableRow>
@@ -292,7 +288,6 @@ async function connectWebSocket() {
         </TableFooter>
       </Table>
 
-      {/* 🔑 Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent>
           <DialogHeader>
