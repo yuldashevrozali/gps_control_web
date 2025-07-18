@@ -1,16 +1,27 @@
 // src/utils/auth.ts
 import axios from "axios";
+import FingerprintJS from "@fingerprintjs/fingerprintjs";
+
+// 🔍 Qurilmaning sun’iy device_id sini olish (FingerprintJS orqali)
+async function getDeviceId(): Promise<string> {
+  const fp = await FingerprintJS.load();
+  const result = await fp.get();
+  console.log("📱 Qurilma ID:", result.visitorId);
+  return result.visitorId;
+}
 
 // 🔐 Asosiy login funksiyasi (phone_number va password orqali)
 export async function loginUser(phone_number: string, password: string): Promise<boolean> {
   try {
+    const device_id = await getDeviceId(); // ✅ FingerprintJS dan device_id
+
     const response = await axios.post(
       "https://gps.mxsoft.uz/account/login/",
       {
         phone_number,
         password,
-        device_id: "salom", // 🔒 har doim shunaqa yuboriladi
-        firebase_token: "string", // 🔒 har doim shunaqa yuboriladi
+        device_id, // ✅ Endi bu yerda sun’iy, lekin unik ID bor
+        firebase_token: "string", // TODO: Agar Firebase token kerak bo‘lsa, uni ham olish kerak
       },
       {
         headers: {
@@ -79,7 +90,7 @@ export async function getValidAccessToken(): Promise<string | null> {
         if (status === 401 || isBlacklisted) {
           console.warn("⚠️ Refresh token eskirgan yoki blacklistga tushgan. Login orqali yangilanadi...");
 
-          // 👇 Hardcoded fallback user
+          // ⚠️ Fallback user (demo maqsadlarida)
           const phone_number = "+998973433006";
           const password = "salom123";
 

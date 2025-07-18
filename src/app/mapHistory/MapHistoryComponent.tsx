@@ -8,6 +8,7 @@ import "../globals.css";
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
+import toast from 'react-hot-toast';
 
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: markerIcon2x.src,
@@ -141,14 +142,23 @@ const MapHistory = () => {
   useEffect(() => {
     if (selectedIndex === null || !mapRef.current || !agents[selectedIndex]) return;
 
-    const agent = agents[selectedIndex];
-    [polylineRef, startMarkerRef, endMarkerRef].forEach(ref => {
-      if (ref.current) mapRef.current!.removeLayer(ref.current);
-    });
-    stopMarkersRef.current.forEach(marker => mapRef.current!.removeLayer(marker));
-    stopMarkersRef.current = [];
-    clientMarkersRef.current.forEach(marker => mapRef.current!.removeLayer(marker));
-    clientMarkersRef.current = [];
+  const agent = agents[selectedIndex];
+
+  // ✅ location_history bo‘sh bo‘lsa xabar chiqadi va return
+  if (!agent.location_history || agent.location_history.length === 0) {
+    toast.error(`${agent.full_name} uchun location_history mavjud emas!`);
+    return;
+  }
+
+  // 🔁 Eski elementlarni tozalash
+  [polylineRef, startMarkerRef, endMarkerRef].forEach(ref => {
+    if (ref.current) mapRef.current!.removeLayer(ref.current);
+  });
+  stopMarkersRef.current.forEach(marker => mapRef.current!.removeLayer(marker));
+  stopMarkersRef.current = [];
+  clientMarkersRef.current.forEach(marker => mapRef.current!.removeLayer(marker));
+  clientMarkersRef.current = [];
+
 
     const latLngPath: L.LatLngTuple[] = agent.location_history.map(
       (loc): L.LatLngTuple => [loc.latitude, loc.longitude]

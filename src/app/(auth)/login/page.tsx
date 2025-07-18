@@ -12,6 +12,7 @@ import { loginSchema, LoginFormValues } from "../schemas/loginSchema";
 import { Checkbox } from "@/components/ui/checkbox";
 import icon from "../../../../public/img/logo.svg";
 import { loginUser } from "../../../../utils/auth";
+import { getDeviceId } from "../../../../utils/device"; // ✅ Qo‘shildi
 
 const Login = () => {
   const {
@@ -25,13 +26,20 @@ const Login = () => {
   const router = useRouter();
 
   const onSubmit = async (data: LoginFormValues) => {
-    const success = await loginUser(data.phone_number, data.password);
+    try {
+      const device_id = await getDeviceId(); // ✅ Qurilma ID olinmoqda
 
-    if (success) {
-      toast.success("✅ Muvaffaqiyatli kirdingiz!");
-      router.push("/dashboard");
-    } else {
-      toast.error("❌ Telefon raqam yoki parol noto‘g‘ri!");
+      const success = await loginUser(data.phone_number, data.password, device_id); // ✅ Uzatildi
+
+      if (success) {
+        toast.success("✅ Muvaffaqiyatli kirdingiz!");
+        router.push("/dashboard");
+      } else {
+        toast.error("❌ Telefon raqam yoki parol noto‘g‘ri!");
+      }
+    } catch (error) {
+      toast.error("❌ Login jarayonida xatolik yuz berdi.");
+      console.error("Login error:", error);
     }
   };
 
@@ -76,9 +84,7 @@ const Login = () => {
             className='w-full h-13 px-4 py-3 border border-violet-500 rounded-2xl focus:outline-none focus:ring-2 focus:ring-violet-500 text-foreground'
           />
           {errors.password && (
-            <p className='text-red-500 text-sm mt-1'>
-              {errors.password.message}
-            </p>
+            <p className='text-red-500 text-sm mt-1'>{errors.password.message}</p>
           )}
         </div>
 

@@ -47,6 +47,7 @@ const RealTimeMap: React.FC = () => {
   const polylineRef = useRef<LeafletPolyline | null>(null);
   const startMarkersMap = useRef<Record<number, LeafletMarker>>({});
   const stopMarkersRef = useRef<LeafletMarker[]>([]);
+  const userInteracted = useRef(false); // foydalanuvchi xaritani surdimi?
 
   const [selectedAgentId, setSelectedAgentId] = useState<number | null>(null);
   const [agents, setAgents] = useState<Agent[]>([]);
@@ -68,83 +69,122 @@ const RealTimeMap: React.FC = () => {
         attribution: '&copy; OpenStreetMap contributors',
       }).addTo(map);
       mapRef.current = map;
+
+      // Agar foydalanuvchi xaritani sursa - belgilab olamiz
+      map.on('movestart', () => {
+        userInteracted.current = true;
+      });
     }
   }, []);
 
   const updateMap = (path: [number, number][], agentId: number) => {
-    if (!mapRef.current || path.length === 0) return;
+  if (!mapRef.current || path.length === 0) {
+    console.warn("Map ref not ready or empty path");
+    return;
+  }
 
-    polylineRef.current?.remove();
-    polylineRef.current = L.polyline(path, { color: 'blue' }).addTo(mapRef.current);
+  console.log("Updating polyline with path length:", path.length);
+
+  polylineRef.current?.remove();
+
+  const newPolyline = L.polyline(path, { color: 'blue' });
+  newPolyline.addTo(mapRef.current);
+  polylineRef.current = newPolyline;
+
+  if (!userInteracted.current) {
     mapRef.current.setView(path[path.length - 1], 13);
+  }
 
-    // Boshlanish nuqtasi (agar hali qo‘yilmagan bo‘lsa)
-    if (!startMarkersMap.current[agentId] && path.length >= 1) {
-      const startMarker = L.marker(path[0])
+  // Boshlanish nuqtasi
+  if (!startMarkersMap.current[agentId] && path.length >= 1) {
+    const startMarker = L.marker(path[0])
+      .addTo(mapRef.current)
+      .bindPopup('Boshlanish nuqtasi')
+      .openPopup();
+    startMarkersMap.current[agentId] = startMarker;
+  }
+
+  // To‘xtash joylari
+  stopMarkersRef.current.forEach(marker => marker.remove());
+  stopMarkersRef.current = [];
+
+  const counts: Record<string, number> = {};
+  for (const [lat, lon] of path) {
+    const key = `${lat.toFixed(5)},${lon.toFixed(5)}`;
+    counts[key] = (counts[key] || 0) + 1;
+
+    if (counts[key] === 3) {
+      const stopMarker = L.marker([lat, lon])
         .addTo(mapRef.current)
-        .bindPopup('Boshlanish nuqtasi')
-        .openPopup();
-      startMarkersMap.current[agentId] = startMarker;
+        .bindPopup(`To‘xtash joyi<br/>Jami masofa: ${calculateDistance(path)} km`);
+      stopMarkersRef.current.push(stopMarker);
     }
-
-    // To‘xtash joylarini aniqlash
-    stopMarkersRef.current.forEach(marker => marker.remove());
-    stopMarkersRef.current = [];
-
-    const counts: Record<string, number> = {};
-    for (const [lat, lon] of path) {
-      const key = `${lat.toFixed(5)},${lon.toFixed(5)}`;
-      counts[key] = (counts[key] || 0) + 1;
-
-      if (counts[key] === 3) {
-        const stopMarker = L.marker([lat, lon])
-          .addTo(mapRef.current)
-          .bindPopup(`To‘xtash joyi<br/>Jami masofa: ${calculateDistance(path)} km`);
-        stopMarkersRef.current.push(stopMarker);
-      }
-    }
-  };
+  }
+};
 
   useEffect(() => {
     if (selectedAgentId && agentPaths[selectedAgentId]) {
       updateMap(agentPaths[selectedAgentId], selectedAgentId);
     }
   }, [selectedAgentId, agentPaths]);
+useEffect(() => {
+  const token = localStorage.getItem('access_token');
 
-  useEffect(() => {
-    const socket = new WebSocket('wss://gps.mxsoft.uz/ws/location/?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6MTc1Mjg5OTA2NiwiaWF0IjoxNzUyNDY3MDY2LCJqdGkiOiJjZWVkNGZjZGU2Y2I0MTZiYTgyNjgxM2ViNzRjN2I4OCIsInVzZXJfaWQiOjF9.w26E7DbV9F9RxUZKRYPYNWnF65fsd6xtvChIa0Hq4oE');
+  if (!token) {
+    console.warn("Access token yo'q!");
+    return;
+  }
 
-    socket.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        if (data?.agents_data) {
-          setAgents(data.agents_data);
+  const socket = new WebSocket(`wss://gps.mxsoft.uz/ws/location/?token=${token}`);
 
-          const updatedPaths: AgentPathMap = { ...agentPaths };
+  socket.onmessage = (event) => {
+    try {
+      const data = JSON.parse(event.data);
+      if (data?.agents_data) {
+        setAgents(data.agents_data);
+
+        setAgentPaths((prevPaths) => {
+          const updatedPaths: AgentPathMap = { ...prevPaths };
+          let changed = false;
 
           for (const agent of data.agents_data) {
             const { id, last_location } = agent;
             if (!last_location) continue;
 
-            const newPoint: [number, number] = [last_location.latitude, last_location.longitude];
+            const newPoint: [number, number] = [
+              last_location.latitude,
+              last_location.longitude,
+            ];
+
             const prevPath = updatedPaths[id] || [];
             const lastPoint = prevPath[prevPath.length - 1];
 
             if (!lastPoint || lastPoint[0] !== newPoint[0] || lastPoint[1] !== newPoint[1]) {
               updatedPaths[id] = [...prevPath, newPoint];
+              changed = true;
+
+              // 🔁 Real-time chizish
+              if (id === selectedAgentId) {
+                updateMap(updatedPaths[id], id);
+              }
             }
           }
 
-          setAgentPaths(updatedPaths);
-          localStorage.setItem('agentPaths', JSON.stringify(updatedPaths));
-        }
-      } catch (err) {
-        console.error('❌ JSON parsing error:', err);
-      }
-    };
+          if (changed) {
+            localStorage.setItem('agentPaths', JSON.stringify(updatedPaths));
+          }
 
-    return () => socket.close();
-  }, [agentPaths]);
+          return updatedPaths;
+        });
+      }
+    } catch (err) {
+      console.error('❌ JSON parsing error:', err);
+    }
+  };
+
+  return () => socket.close();
+}, []); // ✅ bo‘sh dependency
+
 
 
   return (
@@ -155,11 +195,12 @@ const RealTimeMap: React.FC = () => {
         style={{ margin: '10px', padding: '5px' }}
       >
         <option value="">Agent tanlang</option>
-        {agents.map(agent => (
-          <option key={agent.id} value={agent.id}>{agent.full_name}</option>
+        {agents.map((agent) => (
+          <option key={agent.id} value={agent.id}>
+            {agent.full_name}
+          </option>
         ))}
       </select>
-
 
       <div id="map" style={{ height: '500px', width: '100%' }} suppressHydrationWarning />
     </div>
