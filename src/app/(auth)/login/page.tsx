@@ -11,8 +11,7 @@ import { Input } from "@/components/ui/input";
 import { loginSchema, LoginFormValues } from "../schemas/loginSchema";
 import { Checkbox } from "@/components/ui/checkbox";
 import icon from "../../../../public/img/logo.svg";
-import { loginUser } from "../../../../utils/auth";
-import { getDeviceId } from "../../../../utils/device"; // ✅ Qo‘shildi
+import { loginUser } from "../../../../utils/auth"; // ✅ Faqat loginUser
 
 const Login = () => {
   const {
@@ -27,9 +26,7 @@ const Login = () => {
 
   const onSubmit = async (data: LoginFormValues) => {
     try {
-      const device_id = await getDeviceId(); // ✅ Qurilma ID olinmoqda
-
-      const success = await loginUser(data.phone_number, data.password, device_id); // ✅ Uzatildi
+      const success = await loginUser(data.phone_number, data.password); // ✅ Faqat 2 argument
 
       if (success) {
         toast.success("✅ Muvaffaqiyatli kirdingiz!");

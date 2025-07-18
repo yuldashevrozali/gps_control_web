@@ -2,26 +2,26 @@
 import axios from "axios";
 import FingerprintJS from "@fingerprintjs/fingerprintjs";
 
-// 🔍 Qurilmaning sun’iy device_id sini olish (FingerprintJS orqali)
+// 📌 Qurilma ID olish (FingerprintJS orqali)
 async function getDeviceId(): Promise<string> {
   const fp = await FingerprintJS.load();
   const result = await fp.get();
-  console.log("📱 Qurilma ID:", result.visitorId);
+  console.log("📱 Qurilma ID:", result.visitorId); // ✅ Konsolga chiqariladi
   return result.visitorId;
 }
 
-// 🔐 Asosiy login funksiyasi (phone_number va password orqali)
+// 🔐 Login funksiyasi (phone, password, fingerprint bilan)
 export async function loginUser(phone_number: string, password: string): Promise<boolean> {
   try {
-    const device_id = await getDeviceId(); // ✅ FingerprintJS dan device_id
+    const device_id = await getDeviceId(); // ✅ Fingerprint orqali qurilma ID olinmoqda
 
     const response = await axios.post(
       "https://gps.mxsoft.uz/account/login/",
       {
         phone_number,
         password,
-        device_id, // ✅ Endi bu yerda sun’iy, lekin unik ID bor
-        firebase_token: "string", // TODO: Agar Firebase token kerak bo‘lsa, uni ham olish kerak
+        device_id, // ✅ Serverga yuborilmoqda
+        firebase_token: "string", // TODO: Agar kerak bo‘lsa, Firebase tokenni ham dinamik oling
       },
       {
         headers: {
@@ -52,7 +52,7 @@ export async function loginUser(phone_number: string, password: string): Promise
   }
 }
 
-// 🔄 Valid access_token olish logikasi
+// 🔄 Access tokenni tekshirish va yangilash
 export async function getValidAccessToken(): Promise<string | null> {
   const access = localStorage.getItem("access_token");
   const refresh = localStorage.getItem("refresh_token");
@@ -90,7 +90,7 @@ export async function getValidAccessToken(): Promise<string | null> {
         if (status === 401 || isBlacklisted) {
           console.warn("⚠️ Refresh token eskirgan yoki blacklistga tushgan. Login orqali yangilanadi...");
 
-          // ⚠️ Fallback user (demo maqsadlarida)
+          // ⚠️ Demo user
           const phone_number = "+998973433006";
           const password = "salom123";
 
@@ -112,7 +112,7 @@ export async function getValidAccessToken(): Promise<string | null> {
   return null;
 }
 
-// 🚪 Logout qilish funksiyasi
+// 🚪 Logout qilish
 export function logoutUser() {
   localStorage.removeItem("access_token");
   localStorage.removeItem("refresh_token");
