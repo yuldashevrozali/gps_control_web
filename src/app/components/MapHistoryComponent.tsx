@@ -123,24 +123,32 @@ const MapHistory = () => {
   })).current;
 
   useEffect(() => {
-    const accessToken = localStorage.getItem('access_token');
-    console.log(accessToken,127);
-    
-    if (!accessToken) {
-      toast.error('❌ Token topilmadi. Iltimos, qayta login qiling.');
-      return;
-    }
+  const accessToken = localStorage.getItem('access_token');
+  console.log(accessToken, 127);
 
+  if (!accessToken) {
+    toast.error('❌ Token topilmadi. Iltimos, qayta login qiling.');
+    return;
+  }
+
+  try {
     const socket = new WebSocket(`wss://gps.mxsoft.uz/ws/location/?token=${accessToken}`);
+
+    socket.onopen = () => {
+      console.log("✅ WebSocket muvaffaqiyatli ulandi");
+    };
 
     socket.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        setAgents(data.agents_data);
-        console.log(data,138);
-        
+        if (Array.isArray(data.agents_data)) {
+          setAgents(data.agents_data);
+          console.log(data, 138);
+        } else {
+          console.warn("❗ agents_data noto‘g‘ri formatda:", data.agents_data);
+        }
       } catch (err) {
-        console.error('WebSocket JSON parse error', err);
+        console.error('❌ WebSocket JSON parse error', err);
       }
     };
 
@@ -150,7 +158,11 @@ const MapHistory = () => {
     };
 
     return () => socket.close();
-  }, []);
+  } catch (err) {
+    console.error('❌ WebSocket ochishda xatolik:', err);
+  }
+}, []);
+
 
   useEffect(() => {
     if (!mapRef.current) {
@@ -276,16 +288,21 @@ const MapHistory = () => {
     <div>
       <div className="agents-head">
         <h2>Agentlar Haritasi</h2>
-        <select className="select-style" onChange={(e) => setSelectedIndex(Number(e.target.value))} defaultValue="">
-          <option value="" disabled>
-            Agentni tanlang
-          </option>
-          {agents.map((agent, index) => (
-            <option key={index} value={index}>
-              {agent.full_name}
-            </option>
-          ))}
-        </select>
+        <select
+  className="select-style"
+  onChange={(e) => setSelectedIndex(Number(e.target.value))}
+  defaultValue=""
+>
+  <option value="" disabled>
+    Agentni tanlang
+  </option>
+  {Array.isArray(agents) && agents.map((agent, index) => (
+    <option key={index} value={index}>
+      {agent.full_name}
+    </option>
+  ))}
+</select>
+
       </div>
 
       <div id="map" style={{ height: '500px', width: '100%', marginTop: '1rem' }}></div>
