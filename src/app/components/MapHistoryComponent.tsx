@@ -202,7 +202,7 @@ const MapHistory = () => {
     const totalKm = totalDistance(agent.location_history);
     endMarkerRef.current = L.marker(latLngPath[latLngPath.length - 1], { icon: redIcon })
       .addTo(mapRef.current)
-      .bindPopup(`<strong>Tugash nuqtasi</strong><br/>📞 ${agent.phone_number}<br/>📏 Umumiy masofa: ${totalKm} km`);
+      .bindPopup(`<strong>Tugash nuqtasi</strong><br/>📞 ${agent.phone_number}<br/>📏Umumiy masofa:${totalKm} km`);
 
     agent.location_history.forEach((loc, idx) => {
       if (loc.is_stop) {
