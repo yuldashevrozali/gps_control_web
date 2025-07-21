@@ -22,7 +22,7 @@ export default function StatCards() {
     const socket = new WebSocket(`wss://gps.mxsoft.uz/ws/location/?token=${accessToken}`);
 
     socket.onopen = () => {
-      console.log("✅ WebSocket ulanish ochildi");
+      console.log("✅ WebSocket ulanish ochidi");
     };
 
     socket.onmessage = (event) => {
