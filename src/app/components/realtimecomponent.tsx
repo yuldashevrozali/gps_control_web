@@ -8,6 +8,9 @@ import L, {
 } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+
 interface Agent {
   id: number;
   full_name: string;
@@ -27,7 +30,7 @@ function calculateDistance(path: [number, number][]) {
     const [lat1, lon1] = path[i - 1];
     const [lat2, lon2] = path[i];
 
-    const R = 6371; // km
+    const R = 6371;
     const dLat = toRad(lat2 - lat1);
     const dLon = toRad(lon2 - lon1);
     const a =
@@ -47,7 +50,7 @@ const RealTimeMap: React.FC = () => {
   const polylineRef = useRef<LeafletPolyline | null>(null);
   const startMarkersMap = useRef<Record<number, LeafletMarker>>({});
   const stopMarkersRef = useRef<LeafletMarker[]>([]);
-  const userInteracted = useRef(false); // foydalanuvchi xaritani surdimi?
+  const userInteracted = useRef(false);
 
   const [selectedAgentId, setSelectedAgentId] = useState<number | null>(null);
   const [agents, setAgents] = useState<Agent[]>([]);
@@ -70,7 +73,6 @@ const RealTimeMap: React.FC = () => {
       }).addTo(map);
       mapRef.current = map;
 
-      // Agar foydalanuvchi xaritani sursa - belgilab olamiz
       map.on('movestart', () => {
         userInteracted.current = true;
       });
@@ -78,114 +80,119 @@ const RealTimeMap: React.FC = () => {
   }, []);
 
   const updateMap = (path: [number, number][], agentId: number) => {
-  if (!mapRef.current || path.length === 0) {
-    console.warn("Map ref not ready or empty path");
-    return;
-  }
-
-  console.log("Updating polyline with path length:", path.length);
-
-  polylineRef.current?.remove();
-
-  const newPolyline = L.polyline(path, { color: 'blue' });
-  newPolyline.addTo(mapRef.current);
-  polylineRef.current = newPolyline;
-
-  if (!userInteracted.current) {
-    mapRef.current.setView(path[path.length - 1], 13);
-  }
-
-  // Boshlanish nuqtasi
-  if (!startMarkersMap.current[agentId] && path.length >= 1) {
-    const startMarker = L.marker(path[0])
-      .addTo(mapRef.current)
-      .bindPopup('Boshlanish nuqtasi')
-      .openPopup();
-    startMarkersMap.current[agentId] = startMarker;
-  }
-
-  // To‘xtash joylari
-  stopMarkersRef.current.forEach(marker => marker.remove());
-  stopMarkersRef.current = [];
-
-  const counts: Record<string, number> = {};
-  for (const [lat, lon] of path) {
-    const key = `${lat.toFixed(5)},${lon.toFixed(5)}`;
-    counts[key] = (counts[key] || 0) + 1;
-
-    if (counts[key] === 3) {
-      const stopMarker = L.marker([lat, lon])
-        .addTo(mapRef.current)
-        .bindPopup(`To‘xtash joyi<br/>Jami masofa: ${calculateDistance(path)} km`);
-      stopMarkersRef.current.push(stopMarker);
+    if (!mapRef.current || path.length === 0) {
+      console.warn("Map ref not ready or empty path");
+      return;
     }
-  }
-};
 
-  useEffect(() => {
-    if (selectedAgentId && agentPaths[selectedAgentId]) {
-      updateMap(agentPaths[selectedAgentId], selectedAgentId);
+    console.log("Updating polyline with path length:", path.length);
+
+    polylineRef.current?.remove();
+
+    const newPolyline = L.polyline(path, { color: 'blue' });
+    newPolyline.addTo(mapRef.current);
+    polylineRef.current = newPolyline;
+
+    if (!userInteracted.current) {
+      mapRef.current.setView(path[path.length - 1], 13);
     }
-  }, [selectedAgentId, agentPaths]);
-useEffect(() => {
-  const token = localStorage.getItem('access_token');
 
-  if (!token) {
-    console.warn("Access token yo'q!");
-    return;
-  }
+    if (!startMarkersMap.current[agentId] && path.length >= 1) {
+      const startMarker = L.marker(path[0])
+        .addTo(mapRef.current!)
+        .bindPopup('Boshlanish nuqtasi')
+        .openPopup();
+      startMarkersMap.current[agentId] = startMarker;
+    }
 
-  const socket = new WebSocket(`wss://gps.mxsoft.uz/ws/location/?token=${token}`);
+    stopMarkersRef.current.forEach(marker => marker.remove());
+    stopMarkersRef.current = [];
 
-  socket.onmessage = (event) => {
-    try {
-      const data = JSON.parse(event.data);
-      if (data?.agents_data) {
-        setAgents(data.agents_data);
+    const counts: Record<string, number> = {};
+    for (const [lat, lon] of path) {
+      const key = `${lat.toFixed(5)},${lon.toFixed(5)}`;
+      counts[key] = (counts[key] || 0) + 1;
 
-        setAgentPaths((prevPaths) => {
-          const updatedPaths: AgentPathMap = { ...prevPaths };
-          let changed = false;
-
-          for (const agent of data.agents_data) {
-            const { id, last_location } = agent;
-            if (!last_location) continue;
-
-            const newPoint: [number, number] = [
-              last_location.latitude,
-              last_location.longitude,
-            ];
-
-            const prevPath = updatedPaths[id] || [];
-            const lastPoint = prevPath[prevPath.length - 1];
-
-            if (!lastPoint || lastPoint[0] !== newPoint[0] || lastPoint[1] !== newPoint[1]) {
-              updatedPaths[id] = [...prevPath, newPoint];
-              changed = true;
-
-              // 🔁 Real-time chizish
-              if (id === selectedAgentId) {
-                updateMap(updatedPaths[id], id);
-              }
-            }
-          }
-
-          if (changed) {
-            localStorage.setItem('agentPaths', JSON.stringify(updatedPaths));
-          }
-
-          return updatedPaths;
-        });
+      if (counts[key] === 3) {
+        const stopMarker = L.marker([lat, lon])
+          .addTo(mapRef.current!)
+          .bindPopup(`To‘xtash joyi<br/>Jami masofa: ${calculateDistance(path)} km`);
+        stopMarkersRef.current.push(stopMarker);
       }
-    } catch (err) {
-      console.error('❌ JSON parsing error:', err);
     }
   };
 
-  return () => socket.close();
-}, []); // ✅ bo‘sh dependency
+  useEffect(() => {
+    if (!selectedAgentId) return;
 
+    const selectedAgent = agents.find(a => a.id === selectedAgentId);
 
+    if (!selectedAgent || !selectedAgent.last_location) {
+      toast.warning('Agent hali faol emas');
+      return;
+    }
+
+    if (agentPaths[selectedAgentId]) {
+      updateMap(agentPaths[selectedAgentId], selectedAgentId);
+    }
+  }, [selectedAgentId, agentPaths]);
+
+  useEffect(() => {
+    const token = localStorage.getItem('access_token');
+
+    if (!token) {
+      console.warn("Access token yo'q!");
+      return;
+    }
+
+    const socket = new WebSocket(`wss://gps.mxsoft.uz/ws/location/?token=${token}`);
+
+    socket.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data?.agents_data) {
+          setAgents(data.agents_data);
+
+          setAgentPaths((prevPaths) => {
+            const updatedPaths: AgentPathMap = { ...prevPaths };
+            let changed = false;
+
+            for (const agent of data.agents_data) {
+              const { id, last_location } = agent;
+              if (!last_location) continue;
+
+              const newPoint: [number, number] = [
+                last_location.latitude,
+                last_location.longitude,
+              ];
+
+              const prevPath = updatedPaths[id] || [];
+              const lastPoint = prevPath[prevPath.length - 1];
+
+              if (!lastPoint || lastPoint[0] !== newPoint[0] || lastPoint[1] !== newPoint[1]) {
+                updatedPaths[id] = [...prevPath, newPoint];
+                changed = true;
+
+                if (id === selectedAgentId) {
+                  updateMap(updatedPaths[id], id);
+                }
+              }
+            }
+
+            if (changed) {
+              localStorage.setItem('agentPaths', JSON.stringify(updatedPaths));
+            }
+
+            return updatedPaths;
+          });
+        }
+      } catch (err) {
+        console.error('❌ JSON parsing error:', err);
+      }
+    };
+
+    return () => socket.close();
+  }, []);
 
   return (
     <div>
@@ -203,6 +210,8 @@ useEffect(() => {
       </select>
 
       <div id="map" style={{ height: '500px', width: '100%' }} suppressHydrationWarning />
+
+      <ToastContainer />
     </div>
   );
 };
