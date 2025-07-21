@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import L, { Map as LeafletMap, Polyline as LeafletPolyline, Marker as LeafletMarker, LatLngTuple } from 'leaflet';
+import L, { Map as LeafletMap, Polyline as LeafletPolyline, Marker as LeafletMarker } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -17,7 +17,7 @@ interface Agent {
 
 type AgentPathMap = Record<number, [number, number][]>;
 
-function calculateDistance(path: [number, number][]) {
+function calculateDistance(path: [number, number][]): string {
   const toRad = (x: number) => (x * Math.PI) / 180;
   let total = 0;
   for (let i = 1; i < path.length; i++) {
@@ -68,8 +68,8 @@ const RealTimeMap: React.FC = () => {
     }
   }, []);
 
-  const updateMap = (path: LatLngTuple[], agentId: number) => {
-    if (!mapRef.current || !path || path.length === 0 || !path[0]) {
+  const updateMap = (path: [number, number][], agentId: number) => {
+    if (!mapRef.current || path.length === 0 || !Array.isArray(path[0])) {
       console.warn("Xarita yo'q yoki path noto'g'ri:", path);
       return;
     }
@@ -161,7 +161,7 @@ const RealTimeMap: React.FC = () => {
     };
 
     return () => socket.close();
-  }, []);
+  }, [selectedAgentId]);
 
   return (
     <div className="p-4">
@@ -184,9 +184,7 @@ const RealTimeMap: React.FC = () => {
       >
         <option value="">Agent tanlang</option>
         {agents.map(agent => {
-          if (!agent.last_location || typeof agent.last_location.latitude !== 'number' || typeof agent.last_location.longitude !== 'number') {
-            return null; // Bu agent render qilinmaydi
-          }
+          if (!agent.last_location) return null;
           return (
             <option key={agent.id} value={agent.id}>
               {agent.full_name}
