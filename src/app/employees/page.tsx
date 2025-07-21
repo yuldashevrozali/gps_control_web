@@ -198,13 +198,13 @@ const AllEmployees = () => {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Agent Name</TableHead>
+            <TableHead>Agent Ismi</TableHead>
             <TableHead>ID</TableHead>
-            <TableHead>Phone</TableHead>
-            <TableHead>Designation</TableHead>
-            <TableHead>Type</TableHead>
+            <TableHead>Telefon</TableHead>
+            <TableHead>Lavozim</TableHead>
+            <TableHead>Turi</TableHead>
             <TableHead>Status</TableHead>
-            <TableHead>Action</TableHead>
+            <TableHead>Harakat</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>

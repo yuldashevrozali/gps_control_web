@@ -146,14 +146,14 @@ export const Navbar = () => {
               <div className='grid gap-1'>
                 <Button variant='ghost' className='w-full justify-start'>
                   <User className='mr-2 h-4 w-4' />
-                  My Profile
+                  Profilim
                 </Button>
                 <Button
                   variant='ghost'
                   className='w-full justify-start text-red-500 hover:text-red-600'
                   onClick={handleLogout}>
                   <LogOut className='mr-2 h-4 w-4' onClick={handleLogout} />
-                  Log Out
+                  Hisobdan Chiqish
                 </Button>
               </div>
             </PopoverContent>

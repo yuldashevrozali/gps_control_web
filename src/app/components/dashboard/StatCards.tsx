@@ -72,36 +72,36 @@ export default function StatCards() {
 
   const stats = [
     {
-      title: "Total Employee",
+      title: "Agentlar soni",
       value: agentCount,
       percent: 12,
       icon: ArrowUp,
       color: "text-green-600 dark:text-green-400",
-      date: "July 16, 2023",
+      date: "Iyul 16, 2023",
     },
     {
-      title: "Total Applicant",
+      title: "Xaridorlar soni",
       value: totalContracts,
       percent: 5,
       icon: ArrowUp,
       color: "text-green-600 dark:text-green-400",
-      date: "July 14, 2023",
+      date: "Iyul 14, 2023",
     },
     {
-      title: "Today Attendance",
+      title: "Davomat",
       value: 470,
       percent: -8,
       icon: ArrowDown,
       color: "text-red-600 dark:text-red-400",
-      date: "July 14, 2023",
+      date: "Iyul 14, 2023",
     },
     {
-      title: "Total Projects",
+      title: "Jami Qarzlar",
       value: totalDebt.toFixed(2), // yoki Math.round(totalDebt) agar butun son bo‘lsa
       percent: 12,
       icon: ArrowUp,
       color: "text-green-600 dark:text-green-400",
-      date: "July 10, 2023",
+      date: "Iyul 10, 2023",
     },
   ];
 
@@ -130,7 +130,7 @@ export default function StatCards() {
                 </div>
               </div>
               <p className="text-xs text-muted-foreground">
-                Update: {item.date}
+                Yangilanish: {item.date}
               </p>
             </CardContent>
           </Card>

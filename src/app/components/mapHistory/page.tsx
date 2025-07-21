@@ -2,7 +2,7 @@
 
 import dynamic from 'next/dynamic';
 
-const MapHistory = dynamic(() => import('../components/MapHistoryComponent'), {
+const MapHistory = dynamic(() => import('../MapHistoryComponent'), {
   ssr: false,
 });
 
