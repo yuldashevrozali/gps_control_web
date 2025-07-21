@@ -1,12 +1,9 @@
-"use client";
+'use client';
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import AttendanceChart from "@/app/components/dashboard/AttendanceChart";
-import AttendanceTable from "@/app/components/dashboard/AttendanceTable";
-import MyScheduleCard from "@/app/components/dashboard/MyScheduleCard";
+import dynamic from 'next/dynamic';
 import StatCards from "@/app/components/dashboard/StatCards";
-import { Card, CardContent } from "@/components/ui/card";
 
 // Cookie'dan qiymat olish funksiyasi
 function getCookie(name: string): string | null {
@@ -15,6 +12,11 @@ function getCookie(name: string): string | null {
   if (parts.length === 2) return parts.pop()?.split(";").shift() || null;
   return null;
 }
+
+// Dinamik import qilingan MapHistory komponenti
+const MapHistory = dynamic(() => import('../components/MapHistoryComponent'), {
+  ssr: false,
+});
 
 export default function Dashboard() {
   const router = useRouter();
@@ -31,17 +33,13 @@ export default function Dashboard() {
       <div className="flex flex-col lg:flex-row gap-6">
         <div className="flex-1 space-y-6">
           <StatCards />
-          <Card>
-            <CardContent className="p-6">
-              <AttendanceChart />
-            </CardContent>
-          </Card>
-        </div>
-        <div className="lg:w-96">
-          <MyScheduleCard />
         </div>
       </div>
-      <AttendanceTable />
+
+      {/* MapHistory pastga qo‘shildi */}
+      <div className="mt-15">
+        <MapHistory />
+      </div>
     </div>
   );
 }
