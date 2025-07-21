@@ -124,6 +124,8 @@ const MapHistory = () => {
 
   useEffect(() => {
     const accessToken = localStorage.getItem('access_token');
+    console.log(accessToken,127);
+    
     if (!accessToken) {
       toast.error('❌ Token topilmadi. Iltimos, qayta login qiling.');
       return;
