@@ -90,7 +90,11 @@ const RealTimeMap: React.FC = () => {
     polylineRef.current?.remove();
 
     const newPolyline = L.polyline(path, { color: 'blue' });
-    newPolyline.addTo(mapRef.current);
+    if (!mapRef.current || path.length === 0) {
+  toast.error("Map ref not ready or empty path");
+  return;
+}
+
     polylineRef.current = newPolyline;
 
     if (!userInteracted.current) {
@@ -128,7 +132,7 @@ const RealTimeMap: React.FC = () => {
     const selectedAgent = agents.find(a => a.id === selectedAgentId);
 
     if (!selectedAgent || !selectedAgent.last_location) {
-      toast.warning('Agent hali faol emas');
+      toast.error('Agent hali faol emas');
       return;
     }
 
@@ -198,7 +202,17 @@ const RealTimeMap: React.FC = () => {
     <div>
       <select
         value={selectedAgentId ?? ''}
-        onChange={(e) => setSelectedAgentId(Number(e.target.value))}
+        onChange={(e) => {
+          const id = Number(e.target.value);
+          const selected = agents.find(a => a.id === id);
+
+          if (!selected?.last_location) {
+            toast.error('❌ Agentning joylashuvi mavjud emas!');
+            return;
+          }
+
+          setSelectedAgentId(id);
+        }}
         style={{ margin: '10px', padding: '5px' }}
       >
         <option value="">Agent tanlang</option>

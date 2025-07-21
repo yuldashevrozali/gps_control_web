@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { loginSchema, LoginFormValues } from "../schemas/loginSchema";
 import { Checkbox } from "@/components/ui/checkbox";
 import icon from "../../../../public/img/logo.svg";
-import { loginUser } from "../../../../utils/auth"; // ✅ Faqat loginUser
+import { loginUser } from "../../../../utils/auth";
 
 const Login = () => {
   const {
@@ -26,13 +26,13 @@ const Login = () => {
 
   const onSubmit = async (data: LoginFormValues) => {
     try {
-      const success = await loginUser(data.phone_number, data.password); // ✅ Faqat 2 argument
+      const success = await loginUser(data.email, data.password); // ✅ email orqali login
 
       if (success) {
         toast.success("✅ Muvaffaqiyatli kirdingiz!");
         router.push("/dashboard");
       } else {
-        toast.error("❌ Telefon raqam yoki parol noto‘g‘ri!");
+        toast.error("❌ Email yoki parol noto‘g‘ri!");
       }
     } catch (error) {
       toast.error("❌ Login jarayonida xatolik yuz berdi.");
@@ -55,25 +55,21 @@ const Login = () => {
         className='mt-8 bg-card shadow-md rounded-xl w-full max-w-md p-6 space-y-6'
       >
         <div>
-          <label className='block text-sm text-muted-foreground mb-1'>
-            Phone Number
-          </label>
+          <label className='block text-sm text-muted-foreground mb-1'>Email</label>
           <Input
-            type='tel'
+            type='email'
             required
-            placeholder='+998901234567'
-            {...register("phone_number")}
+            placeholder='you@example.com'
+            {...register("email")}
             className='w-full h-13 px-4 py-3 border border-violet-500 rounded-2xl focus:outline-none focus:ring-2 focus:ring-violet-500 text-foreground'
           />
-          {errors.phone_number && (
-            <p className='text-red-500 text-sm mt-1'>{errors.phone_number.message}</p>
+          {errors.email && (
+            <p className='text-red-500 text-sm mt-1'>{errors.email.message}</p>
           )}
         </div>
 
         <div>
-          <label className='block text-sm text-muted-foreground mb-1'>
-            Password
-          </label>
+          <label className='block text-sm text-muted-foreground mb-1'>Password</label>
           <Input
             type='password'
             required
@@ -88,9 +84,7 @@ const Login = () => {
         <div className='flex justify-between items-center'>
           <div className='flex items-center space-x-2'>
             <Checkbox id='terms' />
-            <label htmlFor='terms' className='text-sm leading-none'>
-              Remember Me
-            </label>
+            <label htmlFor='terms' className='text-sm leading-none'>Remember Me</label>
           </div>
           <Link href='/forgotPassword' className='text-violet-500 my-2 mx-2'>
             Forgot Password?

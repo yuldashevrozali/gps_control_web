@@ -6,24 +6,23 @@ import FingerprintJS from "@fingerprintjs/fingerprintjs";
 async function getDeviceId(): Promise<string> {
   const fp = await FingerprintJS.load();
   const result = await fp.get();
-  console.log("📱 Qurilma ID:", result.visitorId); // ✅ Konsolga chiqariladi
+  console.log("📱 Qurilma ID:", result.visitorId);
   return result.visitorId;
 }
 
-// 🔐 Login funksiyasi (phone, password, fingerprint bilan)
-export async function loginUser(phone_number: string, password: string): Promise<boolean> {
+// 🔐 Login funksiyasi (email, password, fingerprint bilan)
+export async function loginUser(email: string, password: string): Promise<boolean> {
   try {
-    const device_id = await getDeviceId(); // ✅ Fingerprint orqali qurilma ID olinmoqda
-    console.log("📦 Login payloadga ketayotgan device_id:", device_id);
+    const device_id = await getDeviceId();
 
     const payload = {
-      phone_number,
+      email,
       password,
-      device_id, // ✅ Serverga yuborilmoqda
-      firebase_token: "string", // TODO: Agar kerak bo‘lsa, Firebase tokenni ham dinamik oling
+      device_id,
+      firebase_token: "string", // Agar kerak bo‘lsa, dinamik o‘zgartiring
     };
 
-    console.log("📦 Login payload:", payload); // 👈 QO‘SHILDI: yuborilayotgan barcha ma'lumotlar
+    console.log("📦 Login payload:", payload);
 
     const response = await axios.post(
       "https://gps.mxsoft.uz/account/login/",
@@ -56,7 +55,6 @@ export async function loginUser(phone_number: string, password: string): Promise
     return false;
   }
 }
-
 
 // 🔄 Access tokenni tekshirish va yangilash
 export async function getValidAccessToken(): Promise<string | null> {
@@ -96,11 +94,11 @@ export async function getValidAccessToken(): Promise<string | null> {
         if (status === 401 || isBlacklisted) {
           console.warn("⚠️ Refresh token eskirgan yoki blacklistga tushgan. Login orqali yangilanadi...");
 
-          // ⚠️ Demo user
-          const phone_number = "+998973433006";
+          // ⚠️ Demo user - agar fallback kerak bo‘lsa
+          const email = "demo@example.com";
           const password = "salom123";
 
-          const loggedIn = await loginUser(phone_number, password);
+          const loggedIn = await loginUser(email, password);
           if (loggedIn) {
             return localStorage.getItem("access_token");
           }
