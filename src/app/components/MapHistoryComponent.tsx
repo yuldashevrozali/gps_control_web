@@ -305,7 +305,7 @@ const MapHistory = () => {
               <strong>Kompaniya:</strong> {selectedClient.company}
             </p>
             <p>
-              <strong>Umumiy Qarzdorlik:</strong> {selectedClient.debt.toLocaleString()} so'm
+              <strong>Umumiy Qarzdorlik:</strong> {selectedClient.debt.toLocaleString()} som
             </p>
             <p>
               <strong>To‘lov muddati:</strong> {selectedClient.due_date}
