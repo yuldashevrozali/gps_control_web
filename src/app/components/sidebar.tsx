@@ -74,9 +74,9 @@ export const Sidebar = () => {
 
   const renderSidebarContent = () => (
     <div className="flex flex-col p-4 h-full rounded-[20px] bg-secondary lg:bg-card">
-      <div className="flex items-center mb-6 gap-2">
-        <Image src="/img/logo.svg" alt="HRMS Logo" width={36} height={36} />
-        <span className="text-2xl">HRMS</span>
+      <div className="flex items-center logo_image2 mb-6 gap-2">
+        <Image src="/img/logo2.svg" alt="HRMS Logo" width={36} height={36} />
+        <span className="text-2xl">MXSOFT</span>
       </div>
       <div className="flex flex-col space-y-2 flex-1">
         {SidebarLinks.map((link) => (
