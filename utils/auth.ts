@@ -14,15 +14,20 @@ async function getDeviceId(): Promise<string> {
 export async function loginUser(phone_number: string, password: string): Promise<boolean> {
   try {
     const device_id = await getDeviceId(); // ✅ Fingerprint orqali qurilma ID olinmoqda
+    console.log("📦 Login payloadga ketayotgan device_id:", device_id);
+
+    const payload = {
+      phone_number,
+      password,
+      device_id, // ✅ Serverga yuborilmoqda
+      firebase_token: "string", // TODO: Agar kerak bo‘lsa, Firebase tokenni ham dinamik oling
+    };
+
+    console.log("📦 Login payload:", payload); // 👈 QO‘SHILDI: yuborilayotgan barcha ma'lumotlar
 
     const response = await axios.post(
       "https://gps.mxsoft.uz/account/login/",
-      {
-        phone_number,
-        password,
-        device_id, // ✅ Serverga yuborilmoqda
-        firebase_token: "string", // TODO: Agar kerak bo‘lsa, Firebase tokenni ham dinamik oling
-      },
+      payload,
       {
         headers: {
           "Content-Type": "application/json",
@@ -51,6 +56,7 @@ export async function loginUser(phone_number: string, password: string): Promise
     return false;
   }
 }
+
 
 // 🔄 Access tokenni tekshirish va yangilash
 export async function getValidAccessToken(): Promise<string | null> {

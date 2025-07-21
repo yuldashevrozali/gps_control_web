@@ -21,6 +21,17 @@ type StaticLocation = {
   lon: number;
 };
 
+type ClientPopupData = {
+  // eski maydonlar
+  id: number;
+  name: string;
+  // ...
+  due_date?: string;   // yoki Date, formatga qarab
+  end_date?: string;   // yoki Date
+  total_paid:string
+};
+
+
 type Contract = {
   id: number;
   contract_number: string;
@@ -33,6 +44,7 @@ type Contract = {
   company: {
     name: string;
   };
+  
 };
 
 type AgentLocation = {
@@ -47,6 +59,7 @@ type Agent = {
   is_working: boolean;
   location_history: AgentLocation[];
   contracts?: Contract[];
+  date_joined:string;
 };
 
 type ClientPopupData = {
@@ -55,6 +68,8 @@ type ClientPopupData = {
   debt: number;
   company: string;
   contract_number: string;
+  due_date:string;
+  total_paid:string
 };
 
 function calculateDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -97,8 +112,8 @@ const MapHistory = () => {
 
   const greenIcon = useRef(L.icon({
     iconUrl: 'https://maps.google.com/mapfiles/ms/icons/green-dot.png',
-    iconSize: [32, 32],
-    iconAnchor: [16, 32]
+    iconSize: [60, 60],
+    iconAnchor: [36, 60]
   })).current;
 
   const redIcon = useRef(L.icon({
@@ -114,21 +129,33 @@ const MapHistory = () => {
   })).current;
 
   useEffect(() => {
-    const socket = new WebSocket('wss://gps.mxsoft.uz/ws/location/?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6MTc1Mjg5OTA2NiwiaWF0IjoxNzUyNDY3MDY2LCJqdGkiOiJjZWVkNGZjZGU2Y2I0MTZiYTgyNjgxM2ViNzRjN2I4OCIsInVzZXJfaWQiOjF9.w26E7DbV9F9RxUZKRYPYNWnF65fsd6xtvChIa0Hq4oE');
+  const accessToken = localStorage.getItem("access_token");
+  
+  if (!accessToken) {
+    toast.error("❌ Token topilmadi. Iltimos, qayta login qiling.");
+    return;
+  }
 
-    socket.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        console.log(data,121);
-        
-        setAgents(data.agents_data);
-      } catch (err) {
-        console.error("WebSocket JSON parse error", err);
-      }
-    };
+  const socket = new WebSocket(`wss://gps.mxsoft.uz/ws/location/?token=${accessToken}`);
 
-    return () => socket.close();
-  }, []);
+  socket.onmessage = (event) => {
+    try {
+      const data = JSON.parse(event.data);
+      console.log(data, 121);
+      setAgents(data.agents_data);
+    } catch (err) {
+      console.error("WebSocket JSON parse error", err);
+    }
+  };
+
+  socket.onerror = (err) => {
+    toast.error("WebSocket ulanishida xatolik!");
+    console.error("WebSocket Error:", err);
+  };
+
+  return () => socket.close();
+}, []);
+
 
   useEffect(() => {
     if (!mapRef.current) {
@@ -168,9 +195,22 @@ const MapHistory = () => {
 
     const start = latLngPath[0];
     startMarkerRef.current = L.marker(start, { icon: greenIcon })
-      .addTo(mapRef.current)
-      .bindPopup(`<strong>${agent.full_name}</strong><br/>📞 ${agent.phone_number}<br/>🟢 ${agent.is_working ? 'Ishlayapti' : 'Ishlamayapti'}`)
-      .openPopup();
+  .addTo(mapRef.current)
+  .bindPopup(`
+    <div style="padding: 10px; font-family: sans-serif; font-size: 14px;">
+      <div style="font-weight: bold; font-size: 16px; margin-bottom: 5px; color: #2c3e50;">
+        👤 ${agent.full_name}
+      </div>
+      <div style="margin-bottom: 4px;">
+        📞 <span style="color: #2980b9;">${agent.phone_number}</span>
+      </div>
+      <div>
+        🕓 <span style="color: #27ae60;">${(agent.date_joined).toLocaleString()}</span>
+      </div>
+    </div>
+  `)
+  .openPopup();
+
 
     const end = latLngPath[latLngPath.length - 1];
     const totalKm = totalDistance(agent.location_history);
@@ -211,7 +251,7 @@ const MapHistory = () => {
     </div>
     <div style="margin-bottom: 8px;"><strong>📄 Contract:</strong> ${contract.contract_number}</div>
     <div style="margin-bottom: 8px;"><strong>🏢 Company:</strong> ${contract.company.name}</div>
-    <div style="margin-bottom: 12px;"><strong>💰 Debt:</strong> <span style="color: green; font-weight: bold;"> ${contract.total_debt_1c.toLocaleString()} so'm</span></div>
+    <div style="margin-bottom: 12px;"><strong>💰 Total Debt:</strong> <span style="color: green; font-weight: bold;"> ${contract.total_debt_1c.toLocaleString()} so'm</span></div>
     <button class="view-details-btn" 
       style="background: linear-gradient(to right, #4f46e5, #9333ea); color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%;"
       data-client='${JSON.stringify({
@@ -241,6 +281,44 @@ const MapHistory = () => {
     document.addEventListener('click', handleClick);
     return () => document.removeEventListener('click', handleClick);
   }, []);
+  useEffect(() => {
+  const handleClick = (e: Event) => {
+    const target = e.target as HTMLElement;
+    if (target.classList.contains('view-details-btn')) {
+      const data = target.getAttribute('data-client');
+      if (!data) return;
+
+      const parsed = JSON.parse(data);
+      const agent = selectedIndex !== null ? agents[selectedIndex] : null;
+
+      if (!agent) return;
+
+      // 🔍 Mos kontraktni topamiz
+      const contract = agent.contracts?.find(c =>
+        c.client.full_name === parsed.name &&
+        c.contract_number === parsed.contract_number
+      );
+
+      // 💡 due_date mavjudligini tekshiramiz (agar mavjud bo‘lsa)
+      const due_date = (contract as any)?.due_date || "Mavjud emas";
+      const end_date = (contract as any)?.end_date || "Mavjud emas";
+      const total_paid = (contract as any)?.total_paid || "Mavjud emas";
+
+      // 🆕 due_date ni qo‘shib selectedClient ga o‘tamiz
+      setSelectedClient({
+  ...(parsed as any),
+  due_date,
+  end_date,
+  total_paid,
+});
+
+    }
+  };
+
+  document.addEventListener('click', handleClick);
+  return () => document.removeEventListener('click', handleClick);
+}, [agents, selectedIndex]);
+
 
   return (
     <div>
@@ -268,7 +346,11 @@ const MapHistory = () => {
             <p><strong>Ism:</strong> {selectedClient.name}</p>
             <p><strong>Telefon:</strong> {selectedClient.phone}</p>
             <p><strong>Kompaniya:</strong> {selectedClient.company}</p>
-            <p><strong>Qarzdorlik:</strong> {selectedClient.debt.toLocaleString()} som</p>
+            <p><strong>Umumiy Qarzdorlik:</strong> {selectedClient.debt.toLocaleString()} som</p>
+            <p><strong>To‘lov muddati:</strong> {selectedClient.due_date ? selectedClient.due_date : "Ko‘rsatilmagan"}</p>
+            <p><strong>Tugash muddati:</strong> {selectedClient.end_date ? selectedClient.end_date : "Ko‘rsatilmagan"}</p>
+            <p><strong>To‘langan summa:</strong> {typeof selectedClient.total_paid === 'string' ? selectedClient.total_paid : "Ko‘rsatilmagan"}</p>
+
           </div>
         </div>
       )}
