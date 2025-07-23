@@ -29,22 +29,10 @@ export const Sidebar = () => {
       href: "/employees",
     },
     {
-      name: "Davomat",
-      defaultIcon: "/icons/attendence.svg",
-      activeIcon: "/icons/attendence-active.svg",
-      href: "/attendence",
-    },
-    {
       name: "To'lovlar",
       defaultIcon: "/icons/payroll.svg",
       activeIcon: "/icons/payroll-active.svg",
       href: "/payroll",
-    },
-    {
-      name: "Xarita",
-      defaultIcon: "/icons/jobs.svg",
-      activeIcon: "/icons/jobs-active.svg",
-      href: "/mapHistory",
     },
     {
       name: "Jonli Xarita",
@@ -57,18 +45,6 @@ export const Sidebar = () => {
       defaultIcon: "/icons/canditates.svg",
       activeIcon: "/icons/canditates-active.svg",
       href: "/candidates",
-    },
-    {
-      name: "Bayramlar",
-      defaultIcon: "/icons/holidays.svg",
-      activeIcon: "/icons/holidays-active.svg",
-      href: "/holidays",
-    },
-    {
-      name: "Sozlamalar",
-      defaultIcon: "/icons/settings.svg",
-      activeIcon: "/icons/settings-active.svg",
-      href: "/settings",
     },
   ];
 
