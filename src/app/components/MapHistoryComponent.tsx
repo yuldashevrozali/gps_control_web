@@ -12,7 +12,6 @@ import { Calendar } from "@/components/ui/calendar";
 import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
 import markerIcon from "leaflet/dist/images/marker-icon.png";
 import markerShadow from "leaflet/dist/images/marker-shadow.png";
-import { ToyBrick } from "lucide-react";
 
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: markerIcon2x.src,
@@ -150,7 +149,6 @@ const MapHistory = () => {
   const stopMarkersRef = useRef<L.Marker[]>([]);
   const clientMarkersRef = useRef<L.Marker[]>([]);
   // Qo'shish kerak bo'lgan qator (yaqin atrofdagi boshqa useState hooklari bilan birga)
-const [loading, setLoading] = useState(false);
 
   const [SelectID, setSelectID] = useState<number | null>(null);
   const [agents, setAgents] = useState<Agent[]>([]);
@@ -203,7 +201,6 @@ const [loading, setLoading] = useState(false);
 
     const formattedDate = selectedDate.toISOString().split("T")[0];
     console.log("📅 Tanlangan sana:", formattedDate);
-    setLoading(true);
 
     axios
       .get("https://gps.mxsoft.uz/payments/agent/daily-detail/", {
@@ -222,7 +219,6 @@ const [loading, setLoading] = useState(false);
         }
 
         setselectedAgentData(data);
-        setLoading(false)
       })
       .catch((err) => {
         console.error("API xato:", err);
@@ -233,7 +229,6 @@ const [loading, setLoading] = useState(false);
              toast.error("Ma'lumotni olishda xatolik yuz berdi.");
         }
         setselectedAgentData(null);
-        setLoading(false);
       });
       
       
@@ -460,15 +455,15 @@ const [loading, setLoading] = useState(false);
       <button className="modal-close" onClick={() => setIsModalOpen(false)}>
         &times;
       </button>
-      <h2>Agent Ma'lumotlari</h2>
+      <h2>Agent Malumotlari</h2>
       <div className="modal-body"> {/* Qo'shimcha: tarkib uchun konteyner */}
         <p><strong>Ism:</strong> {modalData.name}</p>
         <p><strong>Telefon:</strong> {modalData.phone}</p>
 
-        {/* Yangi qo'shilgan: Payments ro'yxati */}
+
         {modalData.payments && modalData.payments.length > 0 ? (
           <div>
-            <h2>To'lovlar:</h2>
+            <h2>Tolovlar:</h2>
             <ul>
               {modalData.payments.map((payment) => (
                 <li key={payment.id}>
