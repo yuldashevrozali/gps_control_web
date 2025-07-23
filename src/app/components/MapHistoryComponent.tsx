@@ -107,6 +107,17 @@ type AgentDetails = {
   clients?: Clients[];
 };
 
+// MODAL STATE turi
+type ModalData = {
+  name: string;
+  phone: string;
+  date: string;
+  payments?: Payment[]; // ? optional (majburiy emas) degani
+  notes?: Notes[];
+  clients?: Clients[];
+  call_history?: Call_history[];
+};
+
 // DISTANCE CALCULATION
 function calculateDistanceKm(
   lat1: number,
@@ -157,7 +168,10 @@ const MapHistory = () => {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
 
   // MODAL STATE
-  const [modalData, setModalData] = useState<{ name: string; phone: string; date:string } | null>(null);
+  // Eski:
+// const [modalData, setModalData] = useState<{ name: string; phone: string; date:string } | null>(null);
+// Yangi:
+const [modalData, setModalData] = useState<ModalData | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const greenIcon = L.icon({
@@ -344,7 +358,16 @@ const MapHistory = () => {
                 if (newButton) {
                     newButton.addEventListener('click', () => {
                         console.log("Batafsil tugmasi bosildi"); // Debug log
-                        setModalData({ name: agent.full_name, phone: agent.phone_number,date: date,payments:payments, notes:notes, clients:clients, call_history:call_history});
+                       setModalData({
+  name: agent.full_name,
+  phone: agent.phone_number,
+  date: date,
+  // Quyidagi xususiyatlar modalData turida yo'q!
+  payments: payments,
+  notes: notes,
+  clients: clients,
+  call_history: call_history
+});
                         setIsModalOpen(true);
                         // Optionally close the popup after opening the modal
                         // mapRef.current?.closePopup();
@@ -449,6 +472,7 @@ const MapHistory = () => {
 
       {/* MODAL */}
        {/* MODAL - Updated to show payments */}
+ {/* MODAL - Updated to show all data */}
 {isModalOpen && modalData && (
   <div className="modal-overlay" onClick={() => setIsModalOpen(false)}>
     <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -456,84 +480,100 @@ const MapHistory = () => {
         &times;
       </button>
       <h2>Agent Malumotlari</h2>
-      <div className="modal-body"> {/* Qo'shimcha: tarkib uchun konteyner */}
+      <div className="modal-body">
         <p><strong>Ism:</strong> {modalData.name}</p>
         <p><strong>Telefon:</strong> {modalData.phone}</p>
+        <p><strong>Sana:</strong> {new Date(modalData.date).toLocaleDateString()}</p>
 
-
+        {/* Payments Section */}
+        <h3>Tolovlar:</h3>
+        {/* Tekshiruv: modalData.payments mavjudmi va uzunligi 0 dan kattami? */}
         {modalData.payments && modalData.payments.length > 0 ? (
-          <div>
-            <h2>Tolovlar:</h2>
-            <ul>
-              {modalData.payments.map((payment) => (
-                <li key={payment.id}>
-                  <strong>Contract:</strong> {payment.id} <br />
-                  <strong>contract_id:</strong> {payment.contract_id} <br />
-                  <strong>contract_number:</strong> {new Date(payment.contract_number).toLocaleString()} <br />
-                  <strong>client_id:</strong> {payment.client_id || 'N/A'} <br />
-                  <strong>paid_at:</strong> {payment.paid_at || 'N/A'} <br />
-                  <strong>note_id:</strong> {payment.note_id || 'N/A'} <br />
-                  <strong>note_comment:</strong> {payment.note_comment || 'N/A'} <br />
-                  <strong> </strong> {" "} <br />
-                  {/* Boshqa kerakli maydonlarni qo'shishingiz mumkin */}
-                </li>
-              ))}
-            </ul>
-            <h2>Notelar:</h2>
-             <ul>
-              {modalData.notes.map((notes) => (
-                <li key={notes.id}>
-                  <strong>id:</strong> {notes.id} <br />
-                  <strong>comment:</strong> {notes.comment} <br />
-                  <strong>contract_id:</strong> {notes.contract_id} <br />
-                  <strong>contract_number:</strong> {notes.contract_number} <br />
-                  <strong>client_id:</strong> {notes.client_id} <br />
-                  <strong>created_at:</strong> {notes.created_at} <br />
-                  <strong> </strong> {" "} <br />
-                  {/* Boshqa kerakli maydonlarni qo'shishingiz mumkin */}
-                </li>
-              ))}
-            </ul>
-            <h2>Xaridorlar</h2>
-
-            <ul>
-              {modalData.clients.map((clients) => (
-                <li key={clients.id}>
-                  <strong>id:</strong> {clients.id} <br />
-                  <strong>full_name:</strong> {clients.full_name} <br />
-                  <strong>debt_1c:</strong> {clients.debt_1c} <br />
-                  <strong>total_debt_1c:</strong> {clients.total_debt_1c} <br />
-                  <strong>contract_summary_1c:</strong> {clients.contract_summary_1c} <br />
-                  <strong>mounthly_payment_1c:</strong> {clients.mounthly_payment_1c} <br />
-                  <strong> </strong> {" "} <br />
-                  {/* Boshqa kerakli maydonlarni qo'shishingiz mumkin */}
-                </li>
-              ))}
-            </ul>
-
-            <h2>Qongiroqlar</h2>
-            <ul>
-              {modalData.call_history.map((call_history) => (
-                <li key={call_history.id}>
-                  <strong>id:</strong> {call_history.id} <br />
-                  <strong>username:</strong> {call_history.username} <br />
-                  <strong>phone_number:</strong> {call_history.phone_number} <br />
-                  <strong>call_type:</strong> {call_history.call_type} <br />
-                  <strong>call_date:</strong> {call_history.call_date} <br />
-                  <strong>time:</strong> {call_history.time} <br />
-                  <strong> </strong> {" "} <br />
-                  {/* Boshqa kerakli maydonlarni qo'shishingiz mumkin */}
-                </li>
-              ))}
-            </ul>
-          </div>
+          <ul>
+            {modalData.payments.map((payment) => (
+              <li key={payment.id} style={{ marginBottom: '10px', padding: '5px', border: '1px solid #eee', borderRadius: '4px' }}>
+                <strong>ID:</strong> {payment.id} <br />
+                <strong>Miqdori:</strong> {payment.amount} <br />
+                <strong>Shartnoma ID:</strong> {payment.contract_id} <br />
+                <strong>Shartnoma Raqami:</strong> {payment.contract_number} <br />
+                <strong>Mijoz ID:</strong> {payment.client_id} <br />
+                <strong>Tolangan vaqti:</strong> {new Date(payment.paid_at).toLocaleString()} <br />
+                <strong>Eslatma ID:</strong> {payment.note_id ?? 'N/A'} <br />
+                <strong>Eslatma:</strong> {payment.note_comment ?? 'N/A'}
+              </li>
+            ))}
+          </ul>
         ) : (
           <p>Tolovlar mavjud emas.</p>
         )}
+
+        {/* Notes Section */}
+        <h3>Eslatmalar:</h3>
+         {/* Tekshiruv: modalData.notes mavjudmi va uzunligi 0 dan kattami? */}
+        {modalData.notes && modalData.notes.length > 0 ? (
+          <ul>
+             {modalData.notes.map((note) => (
+              <li key={note.id} style={{ marginBottom: '10px', padding: '5px', border: '1px solid #eee', borderRadius: '4px' }}>
+                <strong>ID:</strong> {note.id} <br />
+                <strong>Izoh:</strong> {note.comment} <br />
+                <strong>Shartnoma ID:</strong> {note.contract_id} <br />
+                <strong>Shartnoma Raqami:</strong> {note.contract_number} <br />
+                <strong>Mijoz ID:</strong> {note.client_id} <br />
+                <strong>Yaratilgan vaqti:</strong> {new Date(note.created_at).toLocaleString()}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p>Eslatmalar mavjud emas.</p>
+        )}
+
+        {/* Clients Section */}
+        <h3>Xaridorlar:</h3>
+         {/* Tekshiruv: modalData.clients mavjudmi va uzunligi 0 dan kattami? */}
+        {modalData.clients && modalData.clients.length > 0 ? (
+          <ul>
+            {modalData.clients.map((client) => (
+              <li key={client.id} style={{ marginBottom: '10px', padding: '5px', border: '1px solid #eee', borderRadius: '4px' }}>
+                <strong>ID:</strong> {client.id} <br />
+                <strong>Ism:</strong> {client.full_name} <br />
+                {/* <strong>Longitude:</strong> {client.longitude} <br />
+                <strong>Latitude:</strong> {client.latitude} <br /> */}
+                <strong>Qarz (1C):</strong> {client.debt_1c?.toLocaleString() ?? 'N/A'} <br />
+                <strong>Umumiy Qarz (1C):</strong> {client.total_debt_1c?.toLocaleString() ?? 'N/A'} <br />
+                <strong>Shartnoma Summasi (1C):</strong> {client.contract_summary_1c?.toLocaleString() ?? 'N/A'} <br />
+                <strong>Oylik Tolov (1C):</strong> {client.mounthly_payment_1c?.toLocaleString() ?? 'N/A'}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p>Xaridorlar mavjud emas.</p>
+        )}
+
+        {/* Call History Section - Simple List */}
+        {/* Tekshiruv: modalData.call_history mavjudmi va uzunligi 0 dan kattami? */}
+        <h3>Qongiroq Tarixi:</h3>
+        {modalData.call_history && modalData.call_history.length > 0 ? (
+          <ul>
+            {modalData.call_history.map((call) => (
+              <li key={call.id}>
+                <strong>ID:</strong> {call.id} |
+                <strong>Foydalanuvchi:</strong> {call.username} |
+                <strong>Raqam:</strong> {call.phone_number} |
+                <strong>Turi:</strong> {call.call_type} |
+                <strong>Sana:</strong> {new Date(call.call_date).toLocaleDateString()} |
+                <strong>Vaqt (sekund):</strong> {call.time}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p>Qongiroq tarixi mavjud emas.</p>
+        )}
+
       </div>
     </div>
   </div>
 )}
+{/* END MODAL */}
 {/* END MODAL */}
       {/* END MODAL */}
     </div>
