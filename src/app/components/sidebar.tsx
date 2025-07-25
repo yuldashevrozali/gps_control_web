@@ -41,9 +41,9 @@ export const Sidebar = () => {
       href: "/real_time_map",
     },
     {
-      name: "Xaridorlar",
-      defaultIcon: "/icons/canditates.svg",
-      activeIcon: "/icons/canditates-active.svg",
+      name: "Notes",
+      defaultIcon: "/icons/notes.svg",
+      activeIcon: "/icons/notes.svg",
       href: "/candidates",
     },
   ];
