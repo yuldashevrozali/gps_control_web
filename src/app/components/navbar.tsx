@@ -40,6 +40,10 @@ export const Navbar = () => {
     return "Good Evening";
   };
 
+
+  const handleProfile = () => {
+  router.push("/profilim");
+};
   const getHeaderProps = () => {
     const subtitle = getTimeBasedSubtitle();
     if (pathname === "/dashboard") {
@@ -144,10 +148,14 @@ export const Navbar = () => {
 
             <PopoverContent className='w-48 p-2 border rounded-md shadow-lg'>
               <div className='grid gap-1'>
-                <Button variant='ghost' className='w-full justify-start'>
-                  <User className='mr-2 h-4 w-4' />
-                  Profilim
-                </Button>
+                <Button
+  variant='ghost'
+  className='w-full justify-start'
+  onClick={handleProfile} // 👈 bu yerda onClick qo'shildi
+>
+  <User className='mr-2 h-4 w-4' />
+  Profilim
+</Button>
                 <Button
                   variant='ghost'
                   className='w-full justify-start text-red-500 hover:text-red-600'
