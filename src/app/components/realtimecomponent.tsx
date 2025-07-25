@@ -356,7 +356,7 @@ const drawPath = (coords: [number, number][]) => {
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg font-semibold">
-                  Agent Selection
+                  Agentlar
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -392,7 +392,7 @@ const drawPath = (coords: [number, number][]) => {
                       disabled={isTracking}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select an agent" />
+                        <SelectValue placeholder="agent tanlang" />
                       </SelectTrigger>
                       <SelectContent>
                         {agents.map((agent) => (
@@ -410,7 +410,7 @@ const drawPath = (coords: [number, number][]) => {
                           disabled={!selectedAgent}
                           className="flex-1"
                         >
-                          Start Tracking
+                          Boshlash
                         </Button>
                       ) : (
                         <Button
@@ -418,7 +418,7 @@ const drawPath = (coords: [number, number][]) => {
                           variant="destructive"
                           className="flex-1"
                         >
-                          Stop Tracking
+                          Toxtatish
                         </Button>
                       )}
                       <Button
