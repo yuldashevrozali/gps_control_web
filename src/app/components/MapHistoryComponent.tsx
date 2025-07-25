@@ -54,6 +54,7 @@ type Agent = {
   phone_number: string;
   is_working: boolean;
   date_joined: string;
+  first_name:string;
 };
 
 type Payment = {
@@ -223,6 +224,7 @@ const [modalData, setModalData] = useState<ModalData | null>(null);
       })
       .then((res) => {
         const data = res.data;
+        console.timeLog("⏱️ WebSocket - Jami vaqt", "📥 Ma'lumot kelmoqda");
 
         if (!data.location_history || data.location_history.length === 0) {
           toast.error(
@@ -231,6 +233,7 @@ const [modalData, setModalData] = useState<ModalData | null>(null);
           setselectedAgentData(null);
           return;
         }
+        console.timeEnd("⏱️ WebSocket - Jami vaqt");
 
         setselectedAgentData(data);
       })
@@ -250,38 +253,35 @@ const [modalData, setModalData] = useState<ModalData | null>(null);
 
   // Fetch list of agents via WebSocket
   useEffect(() => {
+  async function fetchAgents() {
     const accessToken = localStorage.getItem("access_token");
     if (!accessToken) return;
 
-    const socket = new WebSocket(`wss://gps.mxsoft.uz/ws/location/?token=${accessToken}`);
+    try {
+      const res = await axios.get("https://gps.mxsoft.uz/account/agent-list/", {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
 
-    socket.onmessage = (e) => {
-      try {
-        const data = JSON.parse(e.data);
-        if (Array.isArray(data.agents_data)) setAgents(data.agents_data);
-      } catch (err) {
-        console.error("WebSocket ma'lumotini parse qilishda xatolik:", err);
-      }
-    };
+      console.log(res,266);
+      
 
-    socket.onerror = (e) => {
-      console.error("WebSocket xatosi:", e);
-      toast.error("WebSocket ulanishida xatolik");
-    };
-
-    socket.onclose = (e) => {
-      if (e.wasClean) {
-        console.log(`WebSocket uzildi: ${e.code} ${e.reason}`);
+      if (res) {
+        console.log(res.data.results,267);
+        setAgents(res.data.results);// optional: agar filtrlash kerak bo‘lsa
+        
       } else {
-        console.error("WebSocket to'satdan uzildi");
-        toast.error("WebSocket ulanishi uzildi");
+        toast.error("Agentlar ro‘yxatini olishda xatolik");
       }
-    };
+    } catch (error) {
+      console.error("❌ Agentlar ro‘yxatini olishda xatolik:", error);
+      toast.error("API dan ma'lumot olishda xatolik");
+    }
+  }
 
-    return () => {
-      socket.close(1000, "Component unmounted");
-    };
-  }, []);
+  fetchAgents();
+}, []);
 
   // Initialize the map
   useEffect(() => {
@@ -309,7 +309,7 @@ const [modalData, setModalData] = useState<ModalData | null>(null);
     console.log("Agent data for map update:", agent);
 
     if (!location_history?.length) {
-        toast.error(`${agent.full_name} uchun location_history mavjud emas!`);
+        toast.error(`${agent.first_name} uchun location_history mavjud emas!`);
         return;
     }
 
@@ -334,7 +334,7 @@ const [modalData, setModalData] = useState<ModalData | null>(null);
     const startPopupContent = document.createElement('div');
     startPopupContent.innerHTML = `
       <div>
-        <strong>👤 ${agent.full_name}</strong><br/>
+        <strong>👤 ${agent.first_name}</strong><br/>
         📞 ${agent.phone_number}<br/>
         🕓 ${new Date(date).toLocaleString()}<br/>
         <button id="open-modal-btn-${agent.id}" class="leaflet-modal-button" style="margin-top: 5px; padding: 4px 8px; background-color: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">
@@ -359,7 +359,7 @@ const [modalData, setModalData] = useState<ModalData | null>(null);
                     newButton.addEventListener('click', () => {
                         console.log("Batafsil tugmasi bosildi"); // Debug log
                        setModalData({
-  name: agent.full_name,
+  name: agent.first_name,
   phone: agent.phone_number,
   date: date,
   // Quyidagi xususiyatlar modalData turida yo'q!
@@ -445,7 +445,7 @@ const [modalData, setModalData] = useState<ModalData | null>(null);
           </option>
           {agents.map((a, i) => (
             <option key={i} value={i}>
-              {a.full_name}
+              {a.first_name}
             </option>
           ))}
         </select>

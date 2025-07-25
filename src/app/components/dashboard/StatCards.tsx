@@ -4,27 +4,9 @@ import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowUp } from "lucide-react";
 import { toast } from "react-toastify";
+import axios from "axios";
 
-// Agent va uning kontraktlari uchun interfeyslarni aniqlash
-interface Contract {
-  id: number;
-  total_debt_1c: number | string;
-  // Yangi qo'shilgan
-  mounthly_payment_1c?: number | string | null; // API dan null yoki undefined ham kelishi mumkin
-  // Boshqa kerakli maydonlar...
-}
 
-interface Agent {
-  id: number;
-  contracts?: Contract[];
-  // Boshqa kerakli maydonlar...
-}
-
-interface WebSocketData {
-  type: string;
-  agents_data?: Agent[];
-  // Boshqa kerakli maydonlar...
-}
 
 export default function StatCards() {
   const [agentCount, setAgentCount] = useState<number>(0);
@@ -34,86 +16,52 @@ export default function StatCards() {
   const [totalMonthlyPayment, setTotalMonthlyPayment] = useState<number>(0);
 
   useEffect(() => {
-    const accessToken = localStorage.getItem('access_token');
-    console.log("Token:", accessToken, 127);
+  const accessToken = localStorage.getItem("access_token");
+  if (!accessToken) return;
 
-    if (!accessToken) {
-      toast.error('❌ Token topilmadi. Iltimos, qayta login qiling.');
-      return;
-    }
+  // Agentlar ro‘yxatini olish
+  axios
+    .get("https://gps.mxsoft.uz/account/agent-list/", {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    })
+    .then((res) => {
+      const agents = res.data.results;
+      setAgentCount(agents.length);
+    })
+    .catch((err) => {
+      console.error("❌ Agent listni olishda xatolik:", err);
+      toast.error("Agentlarni olishda xatolik yuz berdi.");
+    });
 
-    const socket = new WebSocket(`wss://gps.mxsoft.uz/ws/location/?token=${accessToken}`);
+  // Contractlar bo‘yicha umumiy ma’lumot olish
+  axios
+    .get("https://gps.mxsoft.uz/payments/contracts/", {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    })
+    .then((res) => {
+      const data = res.data.results;
 
-    socket.onopen = () => {
-      console.log("✅ WebSocket ulanish ochildi");
-    };
+      const contractCount = res.data.count;
+      const totalDebt = parseFloat(data.total_debt || "0");
+      const currentDebt = parseFloat(data.current_debt || "0");
 
-    socket.onmessage = (event) => {
-      try {
-        const data: WebSocketData = JSON.parse(event.data);
-        console.log("📩 WebSocket JSON xabari:", data);
 
-        if (data.type === "connection_status" && Array.isArray(data.agents_data)) {
-          const agents: Agent[] = data.agents_data;
-          setAgentCount(agents.length);
+      setTotalContracts(contractCount);
+      setTotalDebt(totalDebt);
+      setTotalMonthlyPayment(currentDebt);
+    })
+    .catch((err) => {
+      console.error("❌ Contracts API xatoligi:", err);
+      toast.error("Shartnomalarni olishda xatolik yuz berdi.");
+    });
+}, []);
 
-          // Contract soni
-          const contractCount = agents.reduce((acc: number, agent: Agent) => {
-            const contracts = Array.isArray(agent.contracts) ? agent.contracts : [];
-            return acc + contracts.length;
-          }, 0);
-          setTotalContracts(contractCount);
 
-          // Umumiy qarzdorlikni yig‘ish (total_debt_1c)
-          const totalDebtSum = agents.reduce((accDebt: number, agent: Agent) => {
-            const contracts = Array.isArray(agent.contracts) ? agent.contracts : [];
-            const agentDebt = contracts.reduce((contractAcc: number, contract: Contract) => {
-              const debt = typeof contract.total_debt_1c === 'number' ? contract.total_debt_1c : parseFloat(String(contract.total_debt_1c)) || 0;
-              return contractAcc + debt;
-            }, 0);
-            return accDebt + agentDebt;
-          }, 0);
-          setTotalDebt(totalDebtSum);
 
-          // Yangi qo'shilgan: Umumiy oylik to'lovni hisoblash (mounthly_payment_1c)
-          const totalMonthlyPaymentSum = agents.reduce((accPayment: number, agent: Agent) => {
-            const contracts = Array.isArray(agent.contracts) ? agent.contracts : [];
-            const agentPayment = contracts.reduce((contractAccPayment: number, contract: Contract) => {
-              // Xavfsiz konversiya va null/undefined tekshiruvi
-              let paymentValue = 0;
-              if (contract.mounthly_payment_1c != null) { // null yoki undefined emasligini tekshirish
-                 paymentValue = typeof contract.mounthly_payment_1c === 'number' ? contract.mounthly_payment_1c : parseFloat(String(contract.mounthly_payment_1c)) || 0;
-              }
-              return contractAccPayment + paymentValue;
-            }, 0);
-            return accPayment + agentPayment;
-          }, 0);
-          // Yangi qiymatni saqlash
-          setTotalMonthlyPayment(totalMonthlyPaymentSum);
-
-        }
-      } catch (err) {
-        console.error("❌ JSON.parse xatolik:", err);
-      }
-    };
-
-    socket.onerror = (error) => {
-      console.error("❌ WebSocket xatosi:", error);
-    };
-
-    socket.onclose = (event) => {
-      if (event.wasClean) {
-        console.log(`⚠️ WebSocket ulanish tozalandi: ${event.code} ${event.reason}`);
-      } else {
-        console.warn("⚠️ WebSocket ulanish kutilmaganda uzildi");
-      }
-    };
-
-    return () => {
-      console.log("🧹 WebSocket tozalanmoqda...");
-      socket.close(1000, "Component unmounted");
-    };
-  }, []);
 
   // Stats massivini yangilash
   const stats = [

@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import api from "../../../utils/api";
 import {
   Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow,
@@ -25,13 +25,15 @@ import { Label } from "@/components/ui/label";
 import toast from "react-hot-toast";
 import { getValidAccessToken } from "../../../utils/auth";
 import { useRouter } from "next/navigation";
+import axios from "axios";
 
 type Agent = {
   full_name: string;
   phone_number: string;
   id: number;
-  is_working_status: boolean;
-  user_type_display: string;
+  status: boolean;
+  user_type: string;
+  first_name:string;
   type?: string;
 };
 
@@ -52,7 +54,6 @@ const AllEmployees = () => {
   const [newPassword, setNewPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const itemsPerPage = 10;
-  const wsRef = useRef<WebSocket | null>(null);
   const router = useRouter();
 
    useEffect(() => {
@@ -64,59 +65,55 @@ const AllEmployees = () => {
 
 
 
-  useEffect(() => {
-    async function setupSocket() {
+   useEffect(() => {
+    async function fetchAgents() {
+      console.time("⏱️ Agents API dan kelish vaqti");
+
       const token = await getValidAccessToken();
 
       if (!token) {
-        console.error("❌ Access token yo‘q. WebSocket ulanmaydi.");
+        console.error("❌ Access token yo‘q. API so‘rovi yuborilmadi.");
+        toast.error("Token topilmadi. Qayta urinib ko‘ring.");
         return;
       }
 
-      const socket = new WebSocket(`wss://gps.mxsoft.uz/ws/location/?token=${token}`);
-      wsRef.current = socket;
+      try {
+        const response = await axios.get("https://gps.mxsoft.uz/account/agent-list/", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
 
-      socket.onopen = () => console.log("✅ WebSocket ochildi");
-
-      socket.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          if (data?.agents_data) {
-            console.log("📥 Agents:", data.agents_data);
-            setAgents(data.agents_data);
-            setFilteredAgents(data.agents_data);
-          }
-        } catch (err) {
-          console.error("❌ JSON parse error:", err);
+        if (response) {
+          console.timeEnd("⏱️ Agents API dan kelish vaqti");
+          console.log("📥 Agents:", response.data.results);
+          setAgents(response.data.results);
+          setFilteredAgents(response.data.results);
+        } else {
+          toast.error("❌ Agentlar topilmadi");
         }
-      };
-
-      socket.onerror = (err) => {
-        console.error("❌ WebSocket xatolik:", err);
-      };
-
-      socket.onclose = () => {
-        console.log("🔌 WebSocket yopildi");
-      };
+      } catch (error) {
+        console.error("❌ API xatolik:", error);
+        toast.error("API dan ma'lumot olishda xatolik.");
+      }
     }
 
-    setupSocket();
-
-    return () => {
-      wsRef.current?.close();
-    };
+    fetchAgents();
   }, []);
+;
 
   useEffect(() => {
-    const term = searchTerm.toLowerCase();
-    const filtered = agents.filter(
-      (a) =>
-        a.full_name.toLowerCase().includes(term) ||
-        a.phone_number.includes(term)
-    );
-    setFilteredAgents(filtered);
-    setCurrentPage(1);
-  }, [searchTerm, agents]);
+  const term = searchTerm.trim().toLowerCase();
+  const filtered = agents.filter((a) => {
+    const name = a.first_name?.toLowerCase() || "";
+    const phone = a.phone_number?.toLowerCase() || "";
+    return name.includes(term) || phone.includes(term);
+  });
+
+  setFilteredAgents(filtered);
+  setCurrentPage(1);
+}, [searchTerm, agents]);
+
 
   const totalPages = Math.ceil(filteredAgents.length / itemsPerPage);
   const paginatedAgents = filteredAgents.slice(
@@ -226,14 +223,14 @@ const AllEmployees = () => {
                     style={{ width: "auto", height: "auto" }}
                     className="rounded-full"
                   />
-                  {agent.full_name}
+                  {agent.first_name}
                 </TableCell>
                 <TableCell>{agent.id}</TableCell>
                 <TableCell>+{agent.phone_number}</TableCell>
-                <TableCell>{agent.user_type_display}</TableCell>
+                <TableCell>{agent.user_type}</TableCell>
                 <TableCell>{agent.type || "Office"}</TableCell>
                 <TableCell>
-                  {agent.is_working_status ? (
+                  {agent.status ? (
                     <span className="badge badge-sm bg-gradient-success text-white">
                       Online
                     </span>
