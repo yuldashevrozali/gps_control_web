@@ -1,202 +1,497 @@
-'use client';
+import { useEffect, useState, useRef } from "react";
+import axios, { AxiosError } from "axios";
+import L from "leaflet";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { MapPin, Users, Activity } from "lucide-react";
 
-import React, { useEffect, useRef, useState } from 'react';
-import L, { Map as LeafletMap, Polyline as LeafletPolyline, Marker as LeafletMarker } from 'leaflet';
-import 'leaflet/dist/leaflet.css';
-import { toast, ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+// Fix for default markers in Leaflet
+delete (L.Icon.Default.prototype as { _getIconUrl?: unknown })._getIconUrl;
+
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl:
+    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
+  iconUrl:
+    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
+  shadowUrl:
+    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
+});
 
 interface Agent {
-  id: number;
-  full_name: string;
-  last_location: {
+  id: string;
+  name: string;
+  first_name:string;
+  current_location?: {
     latitude: number;
     longitude: number;
-  } | null;
-}
-
-type AgentPathMap = Record<number, [number, number][]>;
-
-function calculateDistance(path: [number, number][]): string {
-  const toRad = (x: number) => (x * Math.PI) / 180;
-  let total = 0;
-  for (let i = 1; i < path.length; i++) {
-    const [lat1, lon1] = path[i - 1];
-    const [lat2, lon2] = path[i];
-    const R = 6371;
-    const dLat = toRad(lat2 - lat1);
-    const dLon = toRad(lon2 - lon1);
-    const a =
-      Math.sin(dLat / 2) ** 2 +
-      Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    total += R * c;
-  }
-  return total.toFixed(2);
-}
-
-const RealTimeMap: React.FC = () => {
-  const mapRef = useRef<LeafletMap | null>(null);
-  const polylineRef = useRef<LeafletPolyline | null>(null);
-  const startMarkersMap = useRef<Record<number, LeafletMarker>>({});
-  const stopMarkersRef = useRef<LeafletMarker[]>([]);
-  const userInteracted = useRef(false);
-
-  const [selectedAgentId, setSelectedAgentId] = useState<number | null>(null);
-  const [agents, setAgents] = useState<Agent[]>([]);
-  const [agentPaths, setAgentPaths] = useState<AgentPathMap>({});
-
-  const selectedPath = selectedAgentId ? agentPaths[selectedAgentId] : null;
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    if (!selectedAgentId || !selectedPath || selectedPath.length === 0) return;
-    updateMap(selectedPath, selectedAgentId);
-  }, [selectedAgentId, agentPaths]);
-
-  useEffect(() => {
-    if (!mapRef.current) {
-      const map = L.map('map').setView([39.65, 66.95], 13);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap contributors',
-      }).addTo(map);
-      mapRef.current = map;
-
-      map.on('movestart', () => {
-        userInteracted.current = true;
-      });
-    }
-  }, []);
-
-  const updateMap = (path: [number, number][], agentId: number) => {
-    if (!mapRef.current || path.length === 0 || !Array.isArray(path[0])) {
-      console.warn("Xarita yo'q yoki path noto'g'ri:", path);
-      return;
-    }
-
-    polylineRef.current?.remove();
-
-    const newPolyline = L.polyline(path, { color: 'blue' }).addTo(mapRef.current);
-    polylineRef.current = newPolyline;
-
-    if (!userInteracted.current) {
-      mapRef.current.setView(path[path.length - 1], 13);
-    }
-
-    if (!startMarkersMap.current[agentId]) {
-      const startMarker = L.marker(path[0])
-        .addTo(mapRef.current)
-        .bindPopup('Boshlanish nuqtasi')
-        .openPopup();
-      startMarkersMap.current[agentId] = startMarker;
-    }
-
-    stopMarkersRef.current.forEach(marker => marker.remove());
-    stopMarkersRef.current = [];
-
-    const counts: Record<string, number> = {};
-    for (const [lat, lon] of path) {
-      const key = `${lat.toFixed(5)},${lon.toFixed(5)}`;
-      counts[key] = (counts[key] || 0) + 1;
-
-      if (counts[key] === 3) {
-        const stopMarker = L.marker([lat, lon])
-          .addTo(mapRef.current!)
-          .bindPopup(`To‘xtash joyi<br/>Jami masofa: ${calculateDistance(path)} km`);
-        stopMarkersRef.current.push(stopMarker);
-      }
-    }
   };
+}
 
+// Demo agents for testing when API is not available
+
+export default function Index() {
+  const [agents, setAgents] = useState<Agent[]>([]);
+  const [selectedAgent, setSelectedAgent] = useState<string>("");
+  const [selectedAgentData, setSelectedAgentData] = useState<Agent | null>(
+    null
+  );
+
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string>("");
+  const [isTracking, setIsTracking] = useState(false);
+  const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
+  const [demoMode, setDemoMode] = useState(false);
+
+  const mapRef = useRef<L.Map | null>(null);
+  const markerRef = useRef<L.Marker | null>(null);
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const trackingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Initialize map
   useEffect(() => {
-    const token = localStorage.getItem('access_token');
-    if (!token) {
-      console.warn("Access token yo'q!");
-      return;
+    if (mapContainerRef.current && !mapRef.current) {
+      mapRef.current = L.map(mapContainerRef.current).setView(
+        [41.2995, 69.2401],
+        12
+      ); // Default to Tashkent
+
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: "© OpenStreetMap contributors",
+      }).addTo(mapRef.current);
     }
 
-    const socket = new WebSocket(`wss://gps.mxsoft.uz/ws/location/?token=${token}`);
-
-    socket.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        if (data?.agents_data) {
-          const filtered = data.agents_data.filter((a: Agent) => {
-            return a.last_location && typeof a.last_location.latitude === 'number' && typeof a.last_location.longitude === 'number';
-          });
-          setAgents(filtered);
-
-          setAgentPaths((prevPaths) => {
-            const updatedPaths: AgentPathMap = { ...prevPaths };
-            let changed = false;
-
-            for (const agent of filtered) {
-              const { id, last_location } = agent;
-              if (!last_location) continue;
-
-              const newPoint: [number, number] = [last_location.latitude, last_location.longitude];
-              const prevPath = updatedPaths[id] || [];
-              const lastPoint = prevPath[prevPath.length - 1];
-
-              if (!lastPoint || lastPoint[0] !== newPoint[0] || lastPoint[1] !== newPoint[1]) {
-                updatedPaths[id] = [...prevPath, newPoint];
-                changed = true;
-
-                if (id === selectedAgentId) {
-                  updateMap(updatedPaths[id], id);
-                }
-              }
-            }
-
-            if (changed) {
-              localStorage.setItem('agentPaths', JSON.stringify(updatedPaths));
-            }
-
-            return updatedPaths;
-          });
-        }
-      } catch (err) {
-        console.error('❌ JSON parsing error:', err);
+    return () => {
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
       }
     };
+  }, []);
 
-    return () => socket.close();
-  }, [selectedAgentId]);
+  // Fetch agents
+  const fetchAgents = async () => {
+    const token =
+      typeof window !== "undefined"
+        ? localStorage.getItem("access_token")
+        : null;
 
-  return (
-    <div className="p-4">
-      <select
-        value={selectedAgentId ?? ''}
-        onChange={(e) => {
-          const id = Number(e.target.value);
-          if (id === 0) {
-            setSelectedAgentId(null);
-            return;
-          }
-          const selected = agents.find(a => a.id === id);
-          if (!selected?.last_location) {
-            toast.error('❌ Agentning joylashuvi mavjud emas!');
-            return;
-          }
-          setSelectedAgentId(id);
-        }}
-        className="border border-gray-300 rounded px-3 py-2 mb-4 w-full max-w-xs"
-      >
-        <option value="">Agent tanlang</option>
-        {agents.map(agent => {
-          if (!agent.last_location) return null;
-          return (
-            <option key={agent.id} value={agent.id}>
-              {agent.full_name}
-            </option>
-          );
-        })}
-      </select>
+    try {
+      setLoading(true);
+      const response = await axios.get(
+        "https://gps.mxsoft.uz/account/agent-list/",
+        {
+          timeout: 10000,
+          headers: {
+            Accept: "application/json",
+            ...(token && { Authorization: `Bearer ${token}` }),
+          },
+        }
+      );
+      const agentList = response.data.results;
+      console.log(agentList, 93);
 
-      <div id="map" style={{ height: '500px', width: '100%' }} suppressHydrationWarning />
-      <ToastContainer />
-    </div>
-  );
+      // Filter agents with valid current_location
+      const validAgents = agentList.filter(
+        (agent: Agent) =>
+          agent.current_location &&
+          agent.current_location.latitude &&
+          agent.current_location.longitude
+      );
+
+      setAgents(validAgents);
+      setError("");
+      setDemoMode(false);
+    } catch (err: unknown) {
+  const axiosError = err as AxiosError;
+
+  if (axiosError.code === "ECONNABORTED") {
+    setError("Request timeout. Please check your connection and try again.");
+  } else if (axiosError.response?.status === 404) {
+    setError("API endpoint not found. Please verify the URL.");
+  } else if (axiosError.response?.status && axiosError.response.status >= 500) {
+    setError("Server error. Please try again later.");
+  } else {
+    setError(
+      "Failed to fetch agents. This might be a CORS issue or the API is unavailable."
+    );
+  }
+
+  console.error("Error fetching agents:", axiosError);
+} finally {
+  setLoading(false);
+}
+  };
+
+  // Load demo agents
+  const loadDemoAgents = () => {
+    setError("");
+    setDemoMode(true);
+    setLoading(false);
+  };
+
+  // Update agent location on map
+  const updateAgentOnMap = (agent: Agent) => {
+  const { current_location } = agent;
+  if (!current_location || !current_location.latitude || !current_location.longitude) return;
+
+  const latitude = typeof current_location.latitude === "string"
+  ? parseFloat(current_location.latitude)
+  : current_location.latitude;
+
+const longitude = typeof current_location.longitude === "string"
+  ? parseFloat(current_location.longitude)
+  : current_location.longitude;
+
+
+  if (!mapRef.current) return;
+
+  // 🔵 LocalStorage'dan avvalgi pathni olish
+  const storedPaths = localStorage.getItem("agentPaths");
+  const parsedPaths: Record<string, [number, number][]> = storedPaths
+    ? JSON.parse(storedPaths)
+    : {};
+
+  // 🔵 Agent uchun yangilangan path
+  const newPoint: [number, number] = [latitude, longitude];
+  const updatedAgentPath = [...(parsedPaths[agent.id] || []), newPoint];
+  parsedPaths[agent.id] = updatedAgentPath;
+
+  // 🔵 LocalStorage'ga saqlash
+  localStorage.setItem("agentPaths", JSON.stringify(parsedPaths));
+
+  drawPath(updatedAgentPath);
+
+  // 🔵 Marker joylashuvi
+  if (!markerRefs.current[agent.id]) {
+    const newMarker = L.marker([latitude, longitude], {
+      icon: L.icon({
+        iconUrl: "/marker-icon.png",
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+      }),
+    }).addTo(mapRef.current);
+    markerRefs.current[agent.id] = newMarker;
+  } else {
+    markerRefs.current[agent.id].setLatLng([latitude, longitude]);
+  }
+
+  // 🔵 Xarita markazga olib kelinadi
+  mapRef.current.setView([latitude, longitude], 15);
 };
 
-export default RealTimeMap;
+
+const pathRef = useRef<L.Polyline | null>(null);
+
+const drawPath = (coords: [number, number][]) => {
+  if (!mapRef.current) return;
+
+  // Eski chiziqni o‘chirish
+  if (pathRef.current) {
+    mapRef.current.removeLayer(pathRef.current);
+  }
+
+  // Yangi yo‘lni chizish
+  pathRef.current = L.polyline(coords, {
+    color: "blue",
+    weight: 4,
+    opacity: 0.7,
+  }).addTo(mapRef.current);
+};
+
+
+  // Track selected agent
+  const startTracking = async () => {
+    const agent = agents.find((a) => a.id === selectedAgent);
+    if (!agent) return;
+
+    setSelectedAgentData(agent);
+    setIsTracking(true);
+    updateAgentOnMap(agent);
+
+    // Start polling for updates every 3 seconds
+    trackingIntervalRef.current = setInterval(async () => {
+      try {
+        if (demoMode) {
+          // Simulate movement for demo mode
+          const currentAgent = { ...agent };
+          if (currentAgent.current_location) {
+            // Add small random movement
+            currentAgent.current_location.latitude +=
+              (Math.random() - 0.5) * 0.001;
+            currentAgent.current_location.longitude +=
+              (Math.random() - 0.5) * 0.001;
+            setSelectedAgentData(currentAgent);
+            updateAgentOnMap(currentAgent);
+            setLastUpdate(new Date());
+          }
+        } else {
+          const response = await axios.get(
+            "https://gps.mxsoft.uz/account/agent-list/",
+            {
+              timeout: 10000,
+              headers: { Accept: "application/json" },
+            }
+          );
+          const updatedAgents = response.data;
+          const updatedAgent = updatedAgents.find(
+            (a: Agent) => a.id === selectedAgent
+          );
+
+          if (updatedAgent && updatedAgent.current_location) {
+            setSelectedAgentData(updatedAgent);
+            updateAgentOnMap(updatedAgent);
+            setLastUpdate(new Date());
+          }
+        }
+      } catch (err) {
+        console.error("Error updating agent location:", err);
+      }
+    }, 3000);
+  };
+
+  // Stop tracking
+  const stopTracking = () => {
+  setIsTracking(false);
+  setSelectedAgentData(null);
+
+  if (trackingIntervalRef.current) {
+    clearInterval(trackingIntervalRef.current);
+    trackingIntervalRef.current = null;
+  }
+
+  if (markerRef.current && mapRef.current) {
+    mapRef.current.removeLayer(markerRef.current);
+    markerRef.current = null;
+  }
+
+  // 👉 localStorage dan path'ni o'chiramiz
+  localStorage.removeItem("agentPaths");
+};
+
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (trackingIntervalRef.current) {
+        clearInterval(trackingIntervalRef.current);
+      }
+    };
+  }, []);
+  const markerRefs = useRef<Record<string, L.Marker>>({});
+
+
+  useEffect(() => {
+  if (!selectedAgent) return;
+
+  const storedPaths = localStorage.getItem("agentPaths");
+  if (storedPaths) {
+    const parsedPaths: Record<string, [number, number][]> = JSON.parse(storedPaths);
+    const agentPath = parsedPaths[selectedAgent] || [];
+    drawPath(agentPath);
+  } else {
+  }
+}, [selectedAgent]);
+
+
+
+
+  // Initial fetch
+  useEffect(() => {
+    fetchAgents();
+  }, []);
+
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+      {/* Header */}
+      <div className="bg-white border-b border-gray-200 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-blue-500 rounded-lg">
+                <MapPin className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">
+                  GPS Tracker
+                </h1>
+                <p className="text-sm text-gray-500">
+                  Real-time agent location monitoring
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2 text-sm text-gray-600">
+                <Users className="h-4 w-4" />
+                <span>{agents.length} agents available</span>
+              </div>
+              {isTracking && (
+                <div className="flex items-center space-x-2 text-sm text-green-600">
+                  <Activity className="h-4 w-4" />
+                  <span>Live tracking</span>
+                </div>
+              )}
+              {demoMode && (
+                <div className="flex items-center space-x-2 text-sm text-orange-600">
+                  <Activity className="h-4 w-4" />
+                  <span>Demo Mode</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {/* Control Panel */}
+          <div className="lg:col-span-1 space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg font-semibold">
+                  Agent Selection
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {loading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                  </div>
+                ) : error ? (
+                  <div>
+                    <p className="text-red-500 text-sm mb-4">{error}</p>
+                    <div className="space-y-2">
+                      <Button
+                        onClick={fetchAgents}
+                        variant="outline"
+                        className="w-full"
+                      >
+                        Retry
+                      </Button>
+                      <Button
+                        onClick={loadDemoAgents}
+                        variant="secondary"
+                        className="w-full"
+                      >
+                        Try Demo Mode
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <Select
+                      value={selectedAgent}
+                      onValueChange={setSelectedAgent}
+                      disabled={isTracking}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select an agent" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {agents.map((agent) => (
+                          <SelectItem key={agent.id} value={agent.id}>
+                            {agent.first_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    <div className="flex gap-2">
+                      {!isTracking ? (
+                        <Button
+                          onClick={startTracking}
+                          disabled={!selectedAgent}
+                          className="flex-1"
+                        >
+                          Start Tracking
+                        </Button>
+                      ) : (
+                        <Button
+                          onClick={stopTracking}
+                          variant="destructive"
+                          className="flex-1"
+                        >
+                          Stop Tracking
+                        </Button>
+                      )}
+                      <Button
+                        onClick={fetchAgents}
+                        variant="outline"
+                        size="icon"
+                      >
+                        <Activity className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Agent Info */}
+            {selectedAgentData && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg font-semibold">
+                    Agent Details
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-sm font-medium text-gray-700">Name</p>
+                      <p className="text-sm text-gray-900">
+                        {selectedAgentData.name}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-700">
+                        Coordinates
+                      </p>
+                      <p className="text-xs text-gray-600 font-mono">
+                        {selectedAgentData.current_location
+                          ? `${Number(selectedAgentData.current_location.latitude).toFixed(6)}, ${Number(selectedAgentData.current_location.longitude).toFixed(6)}`
+                          : "No coordinates"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-700">
+                        Last Update
+                      </p>
+                      <p className="text-xs text-gray-600">
+                        {lastUpdate.toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
+          {/* Map */}
+          <div className="lg:col-span-3">
+            <Card className="h-[70vh] flex flex-col">
+  <CardHeader className="pb-0">
+  </CardHeader>
+  <CardContent className="flex-1 p-2">
+    <div
+    id="map_error"
+      ref={mapContainerRef}
+      className="w-full h-full rounded-lg"
+    />
+  </CardContent>
+</Card>
+
+
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Table,
   TableHeader,
@@ -10,6 +10,15 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { useRouter } from "next/navigation";
+
+function getCookie(name: string): string | null {
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) return parts.pop()?.split(";").shift() || null;
+  return null;
+}
 
 interface Payment {
   id: number;
@@ -32,8 +41,17 @@ const Payroll = () => {
   const [data, setData] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
+  const [firstNameSearch, setFirstNameSearch] = useState("");
+  const [dateSearch, setDateSearch] = useState("");
+  const router = useRouter();
 
-  const totalPages = Math.ceil(data.length / ITEMS_PER_PAGE);
+  useEffect(() => {
+    const isLoggedIn = getCookie("loggedIn");
+    if (isLoggedIn !== "true") {
+      router.push("/login");
+    }
+  }, []);
+
   useEffect(() => {
     const token = localStorage.getItem("access_token");
     if (!token) return;
@@ -53,14 +71,56 @@ const Payroll = () => {
       .finally(() => setLoading(false));
   }, []);
 
+  const filteredData = useMemo(() => {
+    return data.filter((item) => {
+      const matchName = item.client_first_name
+        .toLowerCase()
+        .includes(firstNameSearch.toLowerCase());
+
+      const matchDate = dateSearch
+        ? new Date(item.paid_at).toISOString().slice(0, 10) === dateSearch
+        : true;
+
+      return matchName && matchDate;
+    });
+  }, [data, firstNameSearch, dateSearch]);
+
+  const totalPages = Math.ceil(filteredData.length / ITEMS_PER_PAGE);
+  const currentPageData = filteredData.slice(
+    (page - 1) * ITEMS_PER_PAGE,
+    page * ITEMS_PER_PAGE
+  );
+
   return (
     <div className="p-6">
       <h2 className="text-2xl font-bold mb-4">🧾 Tolovlar Jadvali</h2>
 
+      {/* 🔍 Search filters */}
+      <div className="flex flex-wrap gap-4 mb-4">
+        <Input
+          placeholder="👤 Ism bo‘yicha qidirish"
+          value={firstNameSearch}
+          onChange={(e) => {
+            setFirstNameSearch(e.target.value);
+            setPage(1);
+          }}
+          className="w-64"
+        />
+        <Input
+          type="date"
+          value={dateSearch}
+          onChange={(e) => {
+            setDateSearch(e.target.value);
+            setPage(1);
+          }}
+          className="w-48"
+        />
+      </div>
+
       {loading ? (
-        <p>⏳ Yuklanmoqda&hellip;</p>
-      ) : data.length === 0 ? (
-        <p>🚫 Ma&#39;lumot topilmadi</p>
+        <p>⏳ Yuklanmoqda…</p>
+      ) : filteredData.length === 0 ? (
+        <p>🚫 Malumot topilmadi</p>
       ) : (
         <>
           <div className="overflow-x-auto border rounded-lg">
@@ -78,72 +138,65 @@ const Payroll = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-  {data.map((item) => (
-    <TableRow key={item.id}>
-      <TableCell className="border border-gray-300">
-        {item.client_first_name} {item.client_last_name}
-      </TableCell>
-      <TableCell className="border border-gray-300">{item.contract_number}</TableCell>
-      <TableCell className="border border-gray-300">{item.amount}</TableCell>
-      <TableCell className="border border-gray-300">
-        {new Date(item.paid_at).toLocaleString("uz-UZ", {
-          year: "numeric",
-          month: "2-digit",
-          day: "2-digit",
-          hour: "2-digit",
-          minute: "2-digit",
-        })}
-      </TableCell>
-      <TableCell className="border border-gray-300">
-        {item.method === "CLICK"
-          ? "Click"
-          : item.method === "CASH"
-          ? "Naqd"
-          : item.method === "CARD"
-          ? "Karta"
-          : item.method}
-      </TableCell>
-      <TableCell className="border border-gray-300">
-        {item.is_successful ? "✅" : "❌"}
-      </TableCell>
-      <TableCell className="border border-gray-300">{item.client_id}</TableCell>
-      <TableCell className="border border-gray-300">{item.processed_by_name}</TableCell>
-    </TableRow>
-  ))}
+                {currentPageData.map((item) => (
+                  <TableRow key={item.id}>
+                    <TableCell className="border border-gray-300">
+                      {item.client_first_name} {item.client_last_name}
+                    </TableCell>
+                    <TableCell className="border border-gray-300">{item.contract_number}</TableCell>
+                    <TableCell className="border border-gray-300">{item.amount}</TableCell>
+                    <TableCell className="border border-gray-300">
+                      {new Date(item.paid_at).toLocaleString("uz-UZ", {
+                        year: "numeric",
+                        month: "2-digit",
+                        day: "2-digit",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </TableCell>
+                    <TableCell className="border border-gray-300">
+                      {item.method === "CLICK"
+                        ? "Click"
+                        : item.method === "CASH"
+                        ? "Naqd"
+                        : item.method === "CARD"
+                        ? "Karta"
+                        : item.method}
+                    </TableCell>
+                    <TableCell className="border border-gray-300">
+                      {item.is_successful ? "✅" : "❌"}
+                    </TableCell>
+                    <TableCell className="border border-gray-300">{item.client_id}</TableCell>
+                    <TableCell className="border border-gray-300">{item.processed_by_name}</TableCell>
+                  </TableRow>
+                ))}
 
-  {/* Jadval to‘liq 10 qator bo‘lishi uchun bo‘sh satrlar */}
-  {Array.from({ length: 12 - data.length }).map((_, idx) => (
-    <TableRow key={`empty-${idx}`}>
-      {Array.from({ length: 8 }).map((_, colIdx) => (
-        <TableCell
-          key={colIdx}
-          className="border border-gray-300 text-transparent select-none"
-        >
-          -
-        </TableCell>
-      ))}
-    </TableRow>
-  ))}
-</TableBody>
-
+                {/* Jadvalni 10 qatordan to‘ldirish */}
+                {Array.from({ length: ITEMS_PER_PAGE - currentPageData.length }).map((_, idx) => (
+                  <TableRow key={`empty-${idx}`}>
+                    {Array.from({ length: 8 }).map((_, colIdx) => (
+                      <TableCell
+                        key={colIdx}
+                        className="border border-gray-300 text-transparent select-none"
+                      >
+                        -
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))}
+              </TableBody>
             </Table>
           </div>
 
           {/* Pagination */}
           <div className="mt-4 flex justify-center gap-4">
-            <Button
-              onClick={() => setPage((p) => Math.max(p - 1, 1))}
-              disabled={page === 1}
-            >
+            <Button onClick={() => setPage((p) => Math.max(p - 1, 1))} disabled={page === 1}>
               ⬅️ Oldingi
             </Button>
             <span className="text-lg font-semibold">
               {page} / {totalPages}
             </span>
-            <Button
-              onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
-              disabled={page === totalPages}
-            >
+            <Button onClick={() => setPage((p) => Math.min(p + 1, totalPages))} disabled={page === totalPages}>
               Keyingi ➡️
             </Button>
           </div>

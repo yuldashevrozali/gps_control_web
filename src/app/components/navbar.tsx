@@ -5,7 +5,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import Header from "./header";
 import Image from "next/image";
-import { BellRing, LogOut, Menu, Search, User } from "lucide-react";
+import { BellRing, LogOut, Menu, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -14,7 +14,6 @@ import {
 } from "@/components/ui/popover";
 import { useAppStore } from "@/store/app";
 
-import { Input } from "@/components/ui/input";
 import { useEffect, useState } from "react";
 
 // import { Input } from "@/components/ui/input";
@@ -100,12 +99,6 @@ export const Navbar = () => {
         </div>
         <div className='flex items-center gap-2 sm:gap-4 h-full'>
           <div className='w-full md:w-72'>
-            <div className='relative'>
-              <Input placeholder='Search...' className='pl-10' />
-              <span className='absolute left-3 top-2.5 text-gray-500'>
-                <Search className='w-4 h-4 text-foreground' />
-              </span>
-            </div>
           </div>
           <Button
             variant='secondary'

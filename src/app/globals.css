@@ -9,7 +9,7 @@
 }
 
 body {
-  font-family: "Lexend", sans-serif;
+  font-family:sans-serif;
 }
 
 @custom-variant dark (&:is(.dark *));
@@ -457,3 +457,9 @@ body{
     background-color: #0056b3; /* Darker blue on hover */
 }
 /* --- END MODAL STYLES - RIGHT SIDED, FULL HEIGHT --- */
+
+.map_error{
+  margin-top: 0px;
+  max-width: 750px;
+  height: 600px;
+}

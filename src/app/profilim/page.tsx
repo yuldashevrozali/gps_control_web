@@ -2,6 +2,14 @@
 
 import { useEffect, useState } from "react";
 import axios from "axios";
+import { useRouter } from "next/navigation";
+
+function getCookie(name: string): string | null {
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) return parts.pop()?.split(";").shift() || null;
+  return null;
+}
 
 interface UserProfile {
   id: number;
@@ -17,6 +25,14 @@ interface UserProfile {
 
 export default function Profilim() {
   const [user, setUser] = useState<UserProfile | null>(null);
+  const router = useRouter();
+
+  useEffect(() => {
+          const isLoggedIn = getCookie("loggedIn");
+          if (isLoggedIn !== "true") {
+            router.push("/login");
+          }
+        }, []);
 
   useEffect(() => {
     const token = localStorage.getItem("access_token"); // tokenni shu yerdan oladi

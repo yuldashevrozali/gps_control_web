@@ -35,14 +35,16 @@ const Candidates = () => {
   const router = useRouter();
   const [notes, setNotes] = useState<Note[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
+  const [searchName, setSearchName] = useState("");
+  const [searchDate, setSearchDate] = useState("");
   const itemsPerPage = 10;
 
   function getCookie(name: string): string | null {
-  const value = `; ${document.cookie}`;
-  const parts = value.split(`; ${name}=`);
-  if (parts.length === 2) return parts.pop()?.split(";").shift() || null;
-  return null;
-}
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop()?.split(";").shift() || null;
+    return null;
+  }
 
   useEffect(() => {
     const isLoggedIn = getCookie("loggedIn");
@@ -66,15 +68,56 @@ const Candidates = () => {
     }
   }, []);
 
-  const totalPages = Math.ceil(notes.length / itemsPerPage);
-  const paginatedNotes = notes.slice(
+  // 🔍 Filterlangan natijalar
+  const filteredNotes = notes.filter((note) => {
+    const nameMatch = note.contract.client.first_name
+      .toLowerCase()
+      .includes(searchName.toLowerCase());
+    const dateMatch = searchDate
+      ? new Date(note.created_at).toISOString().slice(0, 10) === searchDate
+      : true;
+    return nameMatch && dateMatch;
+  });
+
+  const totalPages = Math.ceil(filteredNotes.length / itemsPerPage);
+  const paginatedNotes = filteredNotes.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
 
+  // 🔁 Filtrlarni tozalash funksiyasi
+  const clearFilters = () => {
+    setSearchName("");
+    setSearchDate("");
+    setCurrentPage(1); // Sahifani boshiga qaytarish
+  };
+
   return (
     <div className="p-4">
       <h2 className="text-xl font-semibold mb-4">Zametkalar Jadvali</h2>
+
+      {/* 🔍 Qidiruv */}
+      <div className="flex flex-col sm:flex-row gap-4 mb-4">
+        <input
+          type="text"
+          placeholder="Ism bo‘yicha qidirish..."
+          value={searchName}
+          onChange={(e) => setSearchName(e.target.value)}
+          className="border px-3 py-2 rounded w-full sm:w-1/3"
+        />
+        <input
+          type="date"
+          value={searchDate}
+          onChange={(e) => setSearchDate(e.target.value)}
+          className="border px-3 py-2 rounded w-full sm:w-1/3"
+        />
+        <button
+          onClick={clearFilters}
+          className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded w-full sm:w-auto"
+        >
+          Filtrlarni tozalash
+        </button>
+      </div>
 
       <table className="w-full table-auto border border-gray-300">
         <thead>
@@ -114,7 +157,9 @@ const Candidates = () => {
               </tr>
             ) : (
               <tr key={`empty-${index}`}>
-                <td className="border px-4 py-2" colSpan={7}>&nbsp;</td>
+                <td className="border px-4 py-2" colSpan={7}>
+                  &nbsp;
+                </td>
               </tr>
             );
           })}
@@ -151,6 +196,13 @@ const Candidates = () => {
           >
             Keyingi
           </button>
+        </div>
+      )}
+      
+      {/* Agar jami ma'lumotlar 10 dan ko'p bo'lsa, pagination haqida xabar */}
+      {filteredNotes.length > itemsPerPage && (
+        <div className="mt-4 text-center text-gray-600">
+          Jami {filteredNotes.length} ta yozuv mavjud. Har sahifada {itemsPerPage} ta korsatilmoqda.
         </div>
       )}
     </div>
