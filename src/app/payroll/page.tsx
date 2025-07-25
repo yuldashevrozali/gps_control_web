@@ -127,14 +127,30 @@ const Payroll = () => {
             <Table className="w-full text-sm border-collapse border border-gray-300">
               <TableHeader>
                 <TableRow className="bg-gray-100">
-                  <TableHead className="border border-gray-300">👤 Xaridorlar</TableHead>
-                  <TableHead className="border border-gray-300">📄 Contract raqami</TableHead>
-                  <TableHead className="border border-gray-300">💰 Summa</TableHead>
-                  <TableHead className="border border-gray-300">📅 Tolov sanasi</TableHead>
-                  <TableHead className="border border-gray-300">💳 Tolov turi</TableHead>
-                  <TableHead className="border border-gray-300">✅ Holati</TableHead>
-                  <TableHead className="border border-gray-300">🧾 Client ID</TableHead>
-                  <TableHead className="border border-gray-300">👤 Agent</TableHead>
+                  <TableHead className="border border-gray-300">
+                    👤 Xaridorlar
+                  </TableHead>
+                  <TableHead className="border border-gray-300">
+                    📄 Contract raqami
+                  </TableHead>
+                  <TableHead className="border border-gray-300">
+                    💰 Summa
+                  </TableHead>
+                  <TableHead className="border border-gray-300">
+                    📅 Tolov sanasi
+                  </TableHead>
+                  <TableHead className="border border-gray-300">
+                    💳 Tolov turi
+                  </TableHead>
+                  <TableHead className="border border-gray-300">
+                    ✅ Holati
+                  </TableHead>
+                  <TableHead className="border border-gray-300">
+                    🧾 Client ID
+                  </TableHead>
+                  <TableHead className="border border-gray-300">
+                    👤 Agent
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -143,8 +159,15 @@ const Payroll = () => {
                     <TableCell className="border border-gray-300">
                       {item.client_first_name} {item.client_last_name}
                     </TableCell>
-                    <TableCell className="border border-gray-300">{item.contract_number}</TableCell>
-                    <TableCell className="border border-gray-300">{item.amount}</TableCell>
+                    <TableCell className="border border-gray-300">
+                      {item.contract_number}
+                    </TableCell>
+                    <TableCell className="border border-gray-300">
+                      {Number(item.amount)
+                        .toLocaleString("en-US")
+                        .replace(/,/g, " ")}
+                    </TableCell>
+
                     <TableCell className="border border-gray-300">
                       {new Date(item.paid_at).toLocaleString("uz-UZ", {
                         year: "numeric",
@@ -158,21 +181,27 @@ const Payroll = () => {
                       {item.method === "CLICK"
                         ? "Click"
                         : item.method === "CASH"
-                        ? "Naqd"
-                        : item.method === "CARD"
-                        ? "Karta"
-                        : item.method}
+                          ? "Naqd"
+                          : item.method === "CARD"
+                            ? "Karta"
+                            : item.method}
                     </TableCell>
                     <TableCell className="border border-gray-300">
                       {item.is_successful ? "✅" : "❌"}
                     </TableCell>
-                    <TableCell className="border border-gray-300">{item.client_id}</TableCell>
-                    <TableCell className="border border-gray-300">{item.processed_by_name}</TableCell>
+                    <TableCell className="border border-gray-300">
+                      {item.client_id}
+                    </TableCell>
+                    <TableCell className="border border-gray-300">
+                      {item.processed_by_name}
+                    </TableCell>
                   </TableRow>
                 ))}
 
                 {/* Jadvalni 10 qatordan to‘ldirish */}
-                {Array.from({ length: ITEMS_PER_PAGE - currentPageData.length }).map((_, idx) => (
+                {Array.from({
+                  length: ITEMS_PER_PAGE - currentPageData.length,
+                }).map((_, idx) => (
                   <TableRow key={`empty-${idx}`}>
                     {Array.from({ length: 8 }).map((_, colIdx) => (
                       <TableCell
@@ -190,13 +219,19 @@ const Payroll = () => {
 
           {/* Pagination */}
           <div className="mt-4 flex justify-center gap-4">
-            <Button onClick={() => setPage((p) => Math.max(p - 1, 1))} disabled={page === 1}>
+            <Button
+              onClick={() => setPage((p) => Math.max(p - 1, 1))}
+              disabled={page === 1}
+            >
               ⬅️ Oldingi
             </Button>
             <span className="text-lg font-semibold">
               {page} / {totalPages}
             </span>
-            <Button onClick={() => setPage((p) => Math.min(p + 1, totalPages))} disabled={page === totalPages}>
+            <Button
+              onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
+              disabled={page === totalPages}
+            >
               Keyingi ➡️
             </Button>
           </div>

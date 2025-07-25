@@ -83,7 +83,7 @@ export default function StatCards() {
       date: "Iyul 14, 2023",
     },
     {
-      title: "Davomat", // Yoki "Umumiy Oylik To'lov" deb o'zgartirishingiz mumkin
+      title: "Joriy qarzlar", // Yoki "Umumiy Oylik To'lov" deb o'zgartirishingiz mumkin
       // Yangi qo'shilgan: value o'rniga totalMonthlyPayment
       value: totalMonthlyPayment.toLocaleString('uz-UZ', { style: 'currency', currency: 'UZS' }),
       percent: 12, // Bu qiymatni ham dinamik qilishingiz mumkin
