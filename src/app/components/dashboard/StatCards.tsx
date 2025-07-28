@@ -92,7 +92,7 @@ export default function StatCards() {
     },
     {
       title: "Jami Qarzlar",
-      value: `${totalDebt.toLocaleString('uz-UZ')} so'm`,
+      value: `${totalDebt.toLocaleString('uz-UZ')} UZS`,
       percent: 12,
       icon: ArrowUp,
       color: "text-green-600 dark:text-green-400",
