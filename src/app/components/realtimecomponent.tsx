@@ -65,6 +65,13 @@ export default function Index() {
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         attribution: "© OpenStreetMap contributors",
       }).addTo(mapRef.current);
+
+      // Xarita o'lchamini to'g'ri render qilish uchun
+      setTimeout(() => {
+        if (mapRef.current) {
+          mapRef.current.invalidateSize();
+        }
+      }, 300);
     }
 
     return () => {
@@ -138,16 +145,24 @@ export default function Index() {
 
   // Update agent location on map
   const updateAgentOnMap = (agent: Agent) => {
-  const { current_location } = agent;
-  if (!current_location || !current_location.latitude || !current_location.longitude) return;
+    const { current_location } = agent;
+    if (!current_location || !current_location.latitude || !current_location.longitude) return;
 
-  const latitude = typeof current_location.latitude === "string"
-  ? parseFloat(current_location.latitude)
-  : current_location.latitude;
+    // 🔵 Console log for debugging
+    console.log('Agent location updated:', {
+      id: agent.id,
+      name: agent.name,
+      latitude: current_location.latitude,
+      longitude: current_location.longitude,
+      updatedAt: new Date().toLocaleString()
+    });
 
-const longitude = typeof current_location.longitude === "string"
-  ? parseFloat(current_location.longitude)
-  : current_location.longitude;
+    const latitude = typeof current_location.latitude === "string"
+      ? parseFloat(current_location.latitude)
+      : current_location.latitude;
+    const longitude = typeof current_location.longitude === "string"
+      ? parseFloat(current_location.longitude)
+      : current_location.longitude;
 
 
   if (!mapRef.current) return;
@@ -170,13 +185,7 @@ const longitude = typeof current_location.longitude === "string"
 
   // 🔵 Marker joylashuvi
   if (!markerRefs.current[agent.id]) {
-    const newMarker = L.marker([latitude, longitude], {
-      icon: L.icon({
-        iconUrl: "/marker-icon.png",
-        iconSize: [25, 41],
-        iconAnchor: [12, 41],
-      }),
-    }).addTo(mapRef.current);
+    const newMarker = L.marker([latitude, longitude]).addTo(mapRef.current);
     markerRefs.current[agent.id] = newMarker;
   } else {
     markerRefs.current[agent.id].setLatLng([latitude, longitude]);
@@ -232,14 +241,18 @@ const drawPath = (coords: [number, number][]) => {
             setLastUpdate(new Date());
           }
         } else {
+          const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
           const response = await axios.get(
             "https://gps.mxsoft.uz/account/agent-list/",
             {
               timeout: 10000,
-              headers: { Accept: "application/json" },
+              headers: {
+                Accept: "application/json",
+                ...(token && { Authorization: `Bearer ${token}` }),
+              },
             }
           );
-          const updatedAgents = response.data;
+          const updatedAgents = response.data.results || [];
           const updatedAgent = updatedAgents.find(
             (a: Agent) => a.id === selectedAgent
           );
@@ -476,19 +489,14 @@ const drawPath = (coords: [number, number][]) => {
 
           {/* Map */}
           <div className="lg:col-span-3">
-            <Card className="h-[70vh] flex flex-col">
-  <CardHeader className="pb-0">
-  </CardHeader>
-  <CardContent className="flex-1 p-2">
-    <div
-    id="map_error"
-      ref={mapContainerRef}
-      className="w-full h-full rounded-lg"
-    />
-  </CardContent>
-</Card>
-
-
+            <div style={{ height: "70vh", minHeight: 400, maxHeight: "80vh" }} className="w-full rounded-lg overflow-hidden">
+              <div
+                id="map_error"
+                ref={mapContainerRef}
+                style={{ height: "100%", width: "100%" }}
+                className="leaflet-map-container"
+              />
+            </div>
           </div>
         </div>
       </div>

@@ -54,11 +54,14 @@ const Candidates = () => {
       const token = localStorage.getItem("access_token");
       if (!token) return;
       axios
-        .get("https://gps.mxsoft.uz/payments/contracts/notes/agent-or-manager/", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        })
+        .get(
+          "https://gps.mxsoft.uz/payments/contracts/notes/agent-or-manager/",
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        )
         .then((res) => {
           setNotes(res.data.results || []);
         })
@@ -141,14 +144,14 @@ const Candidates = () => {
                   {note.contract.client.last_name}
                 </td>
                 <td className="border px-4 py-2">
-  {note.teg === "PROMISED"
-    ? "Vada berdi"
-    : note.teg === "UNREACHABLE"
-    ? "Berishi mumkin"
-    : note.teg === "NOANSWER"
-    ? "Javob bermadi"
-    : "-"}
-</td>
+                  {note.teg === "PROMISED"
+                    ? "Vada berdi"
+                    : note.teg === "UNREACHABLE"
+                      ? "Berishi mumkin"
+                      : note.teg === "NOANSWER"
+                        ? "Javob bermadi"
+                        : "-"}
+                </td>
 
                 <td className="border px-4 py-2">{note.comment}</td>
                 <td className="border px-4 py-2">
@@ -207,11 +210,12 @@ const Candidates = () => {
           </button>
         </div>
       )}
-      
+
       {/* Agar jami ma'lumotlar 10 dan ko'p bo'lsa, pagination haqida xabar */}
       {filteredNotes.length > itemsPerPage && (
         <div className="mt-4 text-center text-gray-600">
-          Jami {filteredNotes.length} ta yozuv mavjud. Har sahifada {itemsPerPage} ta korsatilmoqda.
+          Jami {filteredNotes.length} ta yozuv mavjud. Har sahifada{" "}
+          {itemsPerPage} ta korsatilmoqda.
         </div>
       )}
     </div>
