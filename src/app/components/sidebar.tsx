@@ -88,7 +88,7 @@ useEffect(() => {
   </div>
 </div>
 
-      <div className="flex flex-col space-y-2 flex-1">
+      <div className="flex flex-col space-y-2 flex-1 bold">
         {SidebarLinks.map((link) => (
           <Link
             href={link.href}

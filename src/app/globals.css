@@ -1,15 +1,32 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-@import url('https://fonts.googleapis.com/css2?family=Geologica:wght@100..900&display=swap');
 
 @font-face {
-  font-family: "Geologica";
+  font-family: 'Geologica';
+  src: url('/fonts/Geologica-Regular.ttf') format('truetype');
   font-weight: 400;
   font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Geologica';
+  src: url('/fonts/Geologica-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
 }
 
 body {
-  font-family:'Geologica',sans-serif;
+  font-family: 'Geologica', sans-serif;
+  font-weight: 400;
+}
+
+.bold {
+  font-weight: 700;
+}
+
+.regular {
+  font-weight: 400;
 }
 
 @custom-variant dark (&:is(.dark *));
@@ -233,7 +250,6 @@ body {
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
   max-width: 400px;
   margin: 0 auto;
-  font-family: 'Geologica'sans-serif;
 }
 
 .card-header {

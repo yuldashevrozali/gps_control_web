@@ -10,7 +10,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Input } from "@/components/ui/input";
 import { loginSchema, LoginFormValues } from "../schemas/loginSchema";
 import { Checkbox } from "@/components/ui/checkbox";
-import icon from "../../../../public/img/logo.svg";
+import icon from "../../../../public/img/logotip.jpg";
 import { loginUser } from "../../../../utils/auth";
 
 const Login = () => {
@@ -43,8 +43,8 @@ const Login = () => {
   return (
     <div className='min-h-screen flex flex-col items-center justify-center px-4 py-8 bg-background text-foreground'>
       <div className='flex flex-col items-center gap-4 text-center'>
-        <div className='rounded-full bg-violet-100 dark:bg-violet-900 p-3'>
-          <Image alt='icon' src={icon} width={300} height={300} />
+        <div className='rounded-full bg-violet-100 dark:bg-violet-900 p-3 flex items-center justify-center' style={{ width: 150, height: 150 }}>
+          <Image alt='icon' src={icon} width={144} height={144} className='rounded-full object-cover' />
         </div>
         <h1 className='text-4xl font-bold'>Welcome 👋</h1>
         <p className='text-muted-foreground text-lg'>Please login here</p>
