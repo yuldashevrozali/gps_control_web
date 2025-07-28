@@ -140,7 +140,16 @@ const Candidates = () => {
                   {note.contract.client.first_name}{" "}
                   {note.contract.client.last_name}
                 </td>
-                <td className="border px-4 py-2">{note.teg || "-"}</td>
+                <td className="border px-4 py-2">
+  {note.teg === "PROMISED"
+    ? "Vada berdi"
+    : note.teg === "UNREACHABLE"
+    ? "Berishi mumkin"
+    : note.teg === "NOANSWER"
+    ? "Javob bermadi"
+    : "-"}
+</td>
+
                 <td className="border px-4 py-2">{note.comment}</td>
                 <td className="border px-4 py-2">
                   {note.promised_time
