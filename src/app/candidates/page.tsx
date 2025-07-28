@@ -54,7 +54,7 @@ const Candidates = () => {
       const token = localStorage.getItem("access_token");
       if (!token) return;
       axios
-        .get("https://gps.mxsoft.uz/payments/contracts/notes/", {
+        .get("https://gps.mxsoft.uz//payments/contracts/notes/agent-or-manager/", {
           headers: {
             Authorization: `Bearer ${token}`,
           },

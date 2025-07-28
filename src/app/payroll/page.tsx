@@ -56,7 +56,7 @@ const Payroll = () => {
     const token = localStorage.getItem("access_token");
     if (!token) return;
 
-    fetch("https://gps.mxsoft.uz/payments/lists/", {
+    fetch("https://gps.mxsoft.uz/payments/manager/payments-lists", {
       headers: {
         Authorization: `Bearer ${token}`,
       },

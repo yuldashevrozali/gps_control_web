@@ -47,10 +47,10 @@ useEffect(() => {
       href: "/dashboard",
     },
     {
-      name: "Agentlar",
-      defaultIcon: "/icons/employees.svg",
-      activeIcon: "/icons/employees-active.svg",
-      href: "/employees",
+      name: "Jonli Xarita",
+      defaultIcon: "/icons/jobs.svg",
+      activeIcon: "/icons/jobs-active.svg",
+      href: "/real_time_map",
     },
     {
       name: "To'lovlar",
@@ -58,18 +58,20 @@ useEffect(() => {
       activeIcon: "/icons/payroll-active.svg",
       href: "/payroll",
     },
-    {
-      name: "Jonli Xarita",
-      defaultIcon: "/icons/jobs.svg",
-      activeIcon: "/icons/jobs-active.svg",
-      href: "/real_time_map",
-    },
+    
     {
       name: "Qaydlar",
       defaultIcon: "/icons/notes.svg",
       activeIcon: "/icons/notes.svg",
       href: "/candidates",
     },
+    {
+      name: "Agentlar",
+      defaultIcon: "/icons/employees.svg",
+      activeIcon: "/icons/employees-active.svg",
+      href: "/employees",
+    },
+    
   ];
 
   const renderSidebarContent = () => (

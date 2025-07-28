@@ -84,7 +84,7 @@ export default function StatCards() {
     {
       title: "Joriy qarzlar", // Yoki "Umumiy Oylik To'lov" deb o'zgartirishingiz mumkin
       // Yangi qo'shilgan: value o'rniga totalMonthlyPayment
-      value: totalMonthlyPayment.toLocaleString('uz-UZ', { style: 'currency', currency: 'UZS' }),
+      value: `${totalMonthlyPayment.toLocaleString('uz-UZ')} UZS`,
       percent: 12, // Bu qiymatni ham dinamik qilishingiz mumkin
       icon: ArrowUp, // Bu ham dinamik bo'lishi mumkin
       color: "text-green-600 dark:text-green-400",
@@ -92,7 +92,7 @@ export default function StatCards() {
     },
     {
       title: "Jami Qarzlar",
-      value: totalDebt.toLocaleString('uz-UZ', { style: 'currency', currency: 'UZS' }),
+      value: `${totalDebt.toLocaleString('uz-UZ')} so'm`,
       percent: 12,
       icon: ArrowUp,
       color: "text-green-600 dark:text-green-400",
