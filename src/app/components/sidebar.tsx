@@ -4,12 +4,36 @@ import Image from "next/image";
 import Link from "next/link";
 import ThemeToggle from "./theme-toggle";
 import { useAppStore } from "@/store/app";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
+import axios from "axios";
 
 export const Sidebar = () => {
   const pathname = usePathname();
   const { isDrawer, setIsDrawer } = useAppStore();
+  const [companyName, setCompanyName] = useState<string | null>(null);
+
+useEffect(() => {
+  const token = localStorage.getItem("access_token");
+
+  if (token) {
+    axios
+      .get("https://gps.mxsoft.uz/account/user/profile/", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+      .then((res) => {
+        const name = res.data?.company_name || null;
+        setCompanyName(name);
+        if (name) localStorage.setItem("company_name", name);
+      })
+      .catch((err) => {
+        console.error("Company name olishda xatolik:", err);
+      });
+  }
+}, []);
+
 
   useEffect(() => {
     setIsDrawer(false);
@@ -51,9 +75,17 @@ export const Sidebar = () => {
   const renderSidebarContent = () => (
     <div className="flex flex-col p-4 h-full rounded-[20px] bg-secondary lg:bg-card">
       <div className="flex items-center logo_image2 mb-6 gap-2">
-        <Image src="/img/logo2.svg" alt="HRMS Logo" width={36} height={36} />
-        <span className="text-2xl">MXSOFT</span>
-      </div>
+  <Image src="/img/logo2.svg" alt="HRMS Logo" width={36} height={36} />
+  <div className="flex flex-col">
+    <span className="text-2xl">MXSOFT</span>
+    {companyName && (
+      <span className="text-xs text-gray-500 dark:text-gray-400">
+        {companyName}
+      </span>
+    )}
+  </div>
+</div>
+
       <div className="flex flex-col space-y-2 flex-1">
         {SidebarLinks.map((link) => (
           <Link

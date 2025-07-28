@@ -21,11 +21,15 @@ interface UserProfile {
   status: boolean;
   start_time: string | null;
   end_time: string | null;
+  company_name?: string | null; // 👈 Qo‘shildi
 }
+
+
 
 export default function Profilim() {
   const [user, setUser] = useState<UserProfile | null>(null);
   const router = useRouter();
+  
 
   useEffect(() => {
           const isLoggedIn = getCookie("loggedIn");
@@ -109,6 +113,11 @@ export default function Profilim() {
             <p className="text-gray-500 text-sm">Tugash vaqti</p>
             <p className="font-medium">{user?.end_time || "—"}</p>
           </div>
+          <div>
+  <p className="text-gray-500 text-sm">Kompaniya nomi</p>
+  <p className="font-medium">{user?.company_name || "—"}</p>
+</div>
+
         </div>
       </div>
     </div>
