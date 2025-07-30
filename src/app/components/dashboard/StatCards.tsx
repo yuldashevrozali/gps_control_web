@@ -45,7 +45,7 @@ export default function StatCards() {
     .then((res) => {
       const data2 = res.data;
 
-      const contractCount = res.data.count;
+      const contractCount = res.data.client_count;
       const totalDebt = parseFloat(data2.total_debt || "0");
       const currentDebt = parseFloat(data2.current_debt || "0");
 
