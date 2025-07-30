@@ -58,6 +58,12 @@ useEffect(() => {
       activeIcon: "/icons/payroll-active.svg",
       href: "/payroll",
     },
+    {
+      name: "Qong'iroqlar tarixi",
+      defaultIcon: "/icons/employees.svg",
+      activeIcon: "/icons/employees-active.svg",
+      href: "/calls",
+    },
     
     {
       name: "Qaydlar",
@@ -71,6 +77,7 @@ useEffect(() => {
       activeIcon: "/icons/employees-active.svg",
       href: "/employees",
     },
+    
     
   ];
 

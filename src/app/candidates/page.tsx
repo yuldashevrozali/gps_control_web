@@ -37,6 +37,7 @@ const Candidates = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchName, setSearchName] = useState("");
   const [searchDate, setSearchDate] = useState("");
+  const [theme, setTheme] = useState("dark")
   const itemsPerPage = 10;
 
   function getCookie(name: string): string | null {
@@ -45,6 +46,20 @@ const Candidates = () => {
     if (parts.length === 2) return parts.pop()?.split(";").shift() || null;
     return null;
   }
+
+  useEffect(() => {
+  const checkThemeChange = () => {
+    const updatedTheme = localStorage.getItem("hrms-theme");
+    setTheme(updatedTheme === "dark" ? "dark" : "light");
+  };
+
+  checkThemeChange(); // ilk yuklanganda
+  const interval = setInterval(checkThemeChange, 10); // har 1 sekundda tekshiradi
+
+  return () => clearInterval(interval);
+}, []);
+
+
 
   useEffect(() => {
     const isLoggedIn = getCookie("loggedIn");
@@ -115,16 +130,19 @@ const Candidates = () => {
           className="border px-3 py-2 rounded w-full sm:w-1/3"
         />
         <button
-          onClick={clearFilters}
-          className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded w-full sm:w-auto"
-        >
-          Filtrlarni tozalash
-        </button>
+  onClick={clearFilters}
+  className={`px-4 py-2 hover:bg-gray-300 rounded w-full sm:w-auto ${
+    theme === "dark" ? "bg-gray-800 text-white" : "bg-gray-100 text-black"
+  }`}
+>
+  Filtrlarni tozalash
+</button>
+
       </div>
 
       <table className="w-full table-auto border border-gray-300">
         <thead>
-          <tr className="bg-gray-100">
+          <tr className={theme === "dark" ? "bg-gray-800" : "bg-gray-100"}>
             <th className="border px-4 py-2">Mijoz</th>
             <th className="border px-4 py-2">Teg</th>
             <th className="border px-4 py-2">Izoh</th>

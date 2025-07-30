@@ -339,8 +339,8 @@ body {
 
 .calendar-navbar{
   position: absolute;
-  right: 40px;
-  bottom: 60px;
+  right: 100px;
+  top: 80px;
   background-color: rgb(114, 112, 112);
   z-index: 10;
 }

@@ -44,6 +44,8 @@ const Payroll = () => {
   const [firstNameSearch, setFirstNameSearch] = useState("");
   const [dateSearch, setDateSearch] = useState("");
   const router = useRouter();
+  const [theme, setTheme] = useState("light");
+
 
   useEffect(() => {
     const isLoggedIn = getCookie("loggedIn");
@@ -51,6 +53,17 @@ const Payroll = () => {
       router.push("/login");
     }
   }, []);
+  useEffect(() => {
+  const checkThemeChange = () => {
+    const updatedTheme = localStorage.getItem("hrms-theme");
+    setTheme(updatedTheme === "dark" ? "dark" : "light");
+  };
+
+  checkThemeChange(); // ilk yuklanganda
+  const interval = setInterval(checkThemeChange, 10); // har 1 sekundda tekshiradi
+
+  return () => clearInterval(interval);
+}, []);
 
   useEffect(() => {
     const token = localStorage.getItem("access_token");
@@ -126,7 +139,7 @@ const Payroll = () => {
           <div className="overflow-x-auto border rounded-lg">
             <Table className="w-full text-sm border-collapse border border-gray-300">
               <TableHeader>
-                <TableRow className="bg-gray-100">
+                <TableRow className={theme === "dark" ? "bg-gray-800" : "bg-gray-100"}>
                   <TableHead className="border border-gray-300">
                     👤 Xaridorlar
                   </TableHead>

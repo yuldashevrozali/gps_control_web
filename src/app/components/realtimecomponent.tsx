@@ -44,6 +44,8 @@ export default function Index() {
   const [selectedAgentData, setSelectedAgentData] = useState<Agent | null>(
     null
   );
+    const [theme, setTheme] = useState("dark")
+  
 
 
   const [loading, setLoading] = useState(true);
@@ -57,33 +59,56 @@ export default function Index() {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const trackingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
+
+  useEffect(() => {
+    const checkThemeChange = () => {
+      const updatedTheme = localStorage.getItem("hrms-theme");
+      setTheme(updatedTheme === "dark" ? "dark" : "light");
+    };
+  
+    checkThemeChange(); // ilk yuklanganda
+    const interval = setInterval(checkThemeChange, 10); // har 1 sekundda tekshiradi
+  
+    return () => clearInterval(interval);
+  }, []);
   // Initialize map
   useEffect(() => {
-    if (mapContainerRef.current && !mapRef.current) {
-      mapRef.current = L.map(mapContainerRef.current).setView(
-        [41.2995, 69.2401],
-        12
-      ); // Default to Tashkent
+  if (mapContainerRef.current && !mapRef.current) {
+    mapRef.current = L.map(mapContainerRef.current).setView(
+      [41.2995, 69.2401],
+      12
+    ); // Default to Tashkent
 
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: "© OpenStreetMap contributors",
-      }).addTo(mapRef.current);
+    const tileUrl =
+      theme === "dark"
+        ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+        : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
 
-      // Xarita o'lchamini to'g'ri render qilish uchun
-      setTimeout(() => {
-        if (mapRef.current) {
-          mapRef.current.invalidateSize();
-        }
-      }, 300);
-    }
+    const attribution =
+      theme === "dark"
+        ? '&copy; <a href="https://carto.com/">CartoDB</a>'
+        : '&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a>';
 
-    return () => {
+    L.tileLayer(tileUrl, {
+      attribution,
+    }).addTo(mapRef.current);
+
+    setTimeout(() => {
       if (mapRef.current) {
-        mapRef.current.remove();
-        mapRef.current = null;
+        mapRef.current.invalidateSize();
       }
-    };
-  }, []);
+    }, 300);
+  }
+
+  // cleanup
+  return () => {
+    if (mapRef.current) {
+      mapRef.current.remove();
+      mapRef.current = null;
+    }
+  };
+}, [theme]); // theme o‘zgarsa ham map qaytadan chiziladi
+
 
   // Fetch agents
   const fetchAgents = async () => {
@@ -352,14 +377,21 @@ const drawPath = (coords: [number, number][]) => {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       {/* Header */}
       <div className="bg-white border-b border-gray-200 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div
+  className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 ${
+    theme === "dark" ? "bg-gray-800 text-white" : "bg-gray-100 text-black"
+  }`}
+>
+
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <div className="p-2 bg-blue-500 rounded-lg">
                 <MapPin className="h-6 w-6 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">
+                <h1 className={`text-2xl font-bold text-gray-900${
+    theme === "dark" ? "text-white" : "text-black"
+  }`}>
                   GPS Tracker
                 </h1>
                 <p className="text-sm text-gray-500">
@@ -370,7 +402,9 @@ const drawPath = (coords: [number, number][]) => {
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-2 text-sm text-gray-600">
                 <Users className="h-4 w-4" />
-                <span>{agents.length} agents available</span>
+                <span className={`${
+    theme === "dark" ? "text-white" : "text-black"
+  }`}>{agents.length} agents available</span>
               </div>
               {isTracking && (
                 <div className="flex items-center space-x-2 text-sm text-green-600">
@@ -389,7 +423,12 @@ const drawPath = (coords: [number, number][]) => {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+      <div
+  className={`max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 ${
+    theme === "dark" ? "bg-gray-800 text-white" : "bg-gray-100 text-black"
+  }`}
+>
+
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Control Panel */}
           <div className="lg:col-span-1 space-y-6">

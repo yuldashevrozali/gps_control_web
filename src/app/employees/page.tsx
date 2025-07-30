@@ -215,7 +215,7 @@ const AllEmployees = () => {
               <TableRow key={idx}>
                 <TableCell className="flex items-center gap-2">
                   <Image
-                    src="/icons/user-avatar1.svg"
+                    src="/icons/user887.png"
                     alt="Avatar"
                     width={60}
                     height={70}

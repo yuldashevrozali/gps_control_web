@@ -1,5 +1,4 @@
 "use client";
-
 import { useEffect, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -8,29 +7,21 @@ import toast from "react-hot-toast";
 import axios from "axios";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
-
 import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
 import markerIcon from "leaflet/dist/images/marker-icon.png";
 import markerShadow from "leaflet/dist/images/marker-shadow.png";
 
+// Leaflet markerlarni to'g'ri ko'rsatish
+delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: markerIcon2x.src,
   iconUrl: markerIcon.src,
   shadowUrl: markerShadow.src,
 });
 
-// TYPES
-type StaticLocation = {
-  lat: number;
-  lon: number;
-};
-
-type Client = {
-  full_name: string;
-  phone_number: string;
-  static_locations: StaticLocation[];
-};
-
+// TURLAR (TYPES)
+type StaticLocation = { lat: number; lon: number };
+type Client = { full_name: string; phone_number: string; static_locations: StaticLocation[] };
 type Contract = {
   id: number;
   contract_number: string;
@@ -41,64 +32,53 @@ type Contract = {
   end_date?: string;
   total_paid?: string;
 };
-
-type AgentLocation = {
-  latitude: number;
-  longitude: number;
-  is_stop: boolean;
-};
-
+type AgentLocation = { latitude: number; longitude: number; is_stop: boolean };
 type Agent = {
   id: number;
   full_name: string;
   phone_number: string;
   is_working: boolean;
   date_joined: string;
-  first_name:string;
-  start_time: string; // Yangi qo'shilgan
-  end_time:string;
+  first_name: string;
+  start_time: string;
+  end_time: string;
 };
-
 type Payment = {
   id: number;
   amount: number;
   contract_id: number;
   contract_number: string;
   client_id: number;
-  paid_at: string; // ISO date string
-  note_id: number | null; // note_id null bo'lishi mumkinmi tekshiring
-  note_comment: string | null; // note_comment null bo'lishi mumkinmi tekshiring
+  paid_at: string;
+  note_id: number | null;
+  note_comment: string | null;
 };
-
 type Notes = {
   id: number;
   comment: string;
   contract_id: number;
-  contract_number:string;
-  client_id:number;
-  created_at:string;
-}
-
+  contract_number: string;
+  client_id: number;
+  created_at: string;
+};
 type Clients = {
-  id:number;
-  full_name:string;
-  longitude:number;
-  latitude:number;
-  debt_1c:number;
-  total_debt_1c:number;
-  contract_summary_1c:number;
-  mounthly_payment_1c:number;
-}
-
+  id: number;
+  full_name: string;
+  longitude: number;
+  latitude: number;
+  debt_1c: number;
+  total_debt_1c: number;
+  contract_summary_1c: number;
+  mounthly_payment_1c: number;
+};
 type Call_history = {
   id: number;
-  username:string;
-  phone_number:string
-  call_type:string;
-  call_date:string;
-  time:number;
-}
-
+  username: string;
+  phone_number: string;
+  call_type: string;
+  call_date: string;
+  time: number;
+};
 type AgentDetails = {
   agent: Agent;
   location_history: AgentLocation[];
@@ -109,26 +89,19 @@ type AgentDetails = {
   notes?: Notes[];
   clients?: Clients[];
 };
-
-// MODAL STATE turi
 type ModalData = {
   name: string;
   phone: string;
   date: string;
-  payments?: Payment[]; // ? optional (majburiy emas) degani
+  payments?: Payment[];
   notes?: Notes[];
   clients?: Clients[];
   call_history?: Call_history[];
 };
 
-// DISTANCE CALCULATION
-function calculateDistanceKm(
-  lat1: number,
-  lon1: number,
-  lat2: number,
-  lon2: number
-): number {
-  const R = 6371; // Radius of the earth in km
+// Masofa hisoblash
+function calculateDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
   const dLon = ((lon2 - lon1) * Math.PI) / 180;
   const a =
@@ -141,7 +114,6 @@ function calculateDistanceKm(
   const d = R * c;
   return +d.toFixed(2);
 }
-
 function totalDistance(points: AgentLocation[]): number {
   let total = 0;
   for (let i = 1; i < points.length; i++) {
@@ -162,58 +134,60 @@ const MapHistory = () => {
   const endMarkerRef = useRef<L.Marker | null>(null);
   const stopMarkersRef = useRef<L.Marker[]>([]);
   const clientMarkersRef = useRef<L.Marker[]>([]);
-  // Qo'shish kerak bo'lgan qator (yaqin atrofdagi boshqa useState hooklari bilan birga)
-
+  const [theme, setTheme] = useState("light");
   const [SelectID, setSelectID] = useState<number | null>(null);
   const [agents, setAgents] = useState<Agent[]>([]);
-  const [selectedAgentData, setselectedAgentData] = useState<AgentDetails | null>(null);
+  const [selectedAgentData, setSelectedAgentData] = useState<AgentDetails | null>(null);
   const [showCalendar, setShowCalendar] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
-
-  // MODAL STATE
-  // Eski:
-// const [modalData, setModalData] = useState<{ name: string; phone: string; date:string } | null>(null);
-// Yangi:
-const [modalData, setModalData] = useState<ModalData | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalData, setModalData] = useState<ModalData | null>(null);
 
-  const greenIcon = L.icon({
-    iconUrl: "https://maps.google.com/mapfiles/ms/icons/green-dot.png",
-    iconSize: [36, 36], // Adjusted size for better visibility
-    iconAnchor: [18, 36],
-  });
-  const redIcon = L.icon({
-    iconUrl: "https://maps.google.com/mapfiles/ms/icons/red-dot.png",
-    iconSize: [32, 32],
-    iconAnchor: [16, 32],
-  });
-  const yellowIcon = L.icon({
-    iconUrl: "https://maps.google.com/mapfiles/ms/icons/yellow-dot.png",
-    iconSize: [32, 32],
-    iconAnchor: [16, 32],
-  });
+  // Temani kuzatish
+  useEffect(() => {
+    const checkThemeChange = () => {
+      const updatedTheme = localStorage.getItem("hrms-theme");
+      setTheme(updatedTheme === "dark" ? "dark" : "light");
+    };
+    checkThemeChange();
+    const interval = setInterval(checkThemeChange, 10);
+    return () => clearInterval(interval);
+  }, []);
 
-  // Fetch agent details based on selected ID and date
+  // Agentlar ro'yxatini olish
+  useEffect(() => {
+    async function fetchAgents() {
+      const accessToken = localStorage.getItem("access_token");
+      if (!accessToken) return;
+      try {
+        const res = await axios.get("https://gps.mxsoft.uz/account/agent-list/", {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        setAgents(res.data.results || []);
+      } catch (error) {
+        console.error("Agentlar ro'yxatini olishda xato:", error);
+        toast.error("Agentlar ro'yxatini olishda xatolik");
+      }
+    }
+    fetchAgents();
+  }, []);
+
+  // Agent ma'lumotlarini olish
   useEffect(() => {
     if (!SelectID || !selectedDate) return;
-
     const accessToken = localStorage.getItem("access_token");
-    if (!accessToken) {
-      toast.error("Token topilmadi. Login qiling.");
-      return;
-    }
+    if (!accessToken) return;
 
-    // Clear previous data and layers
-    setselectedAgentData(null);
+    setSelectedAgentData(null);
     [polylineRef, startMarkerRef, endMarkerRef].forEach((ref) => {
       if (ref.current && mapRef.current) {
         mapRef.current.removeLayer(ref.current);
         ref.current = null;
       }
     });
-    stopMarkersRef.current.forEach((marker) => mapRef.current?.removeLayer(marker));
+    stopMarkersRef.current.forEach((m) => mapRef.current?.removeLayer(m));
     stopMarkersRef.current = [];
-    clientMarkersRef.current.forEach((marker) => mapRef.current?.removeLayer(marker));
+    clientMarkersRef.current.forEach((m) => mapRef.current?.removeLayer(m));
     clientMarkersRef.current = [];
 
     const formattedDate = selectedDate.toISOString().split("T")[0];
@@ -225,183 +199,101 @@ const [modalData, setModalData] = useState<ModalData | null>(null);
       })
       .then((res) => {
         const data = res.data;
-
-
-        if (!data.location_history || data.location_history.length === 0) {
-          toast.error(
-            `${data.agent?.full_name || 'Agent'} uchun ${formattedDate} sanasida location_history mavjud emas!`
-          );
-          setselectedAgentData(null);
+        if (!data.location_history?.length) {
+          toast.error(`${data.agent?.full_name || 'Agent'} uchun lokatsiya mavjud emas!`);
+          setSelectedAgentData(null);
           return;
         }
-        console.timeEnd("⏱️ WebSocket - Jami vaqt");
-
-        setselectedAgentData(data);
+        setSelectedAgentData(data);
       })
       .catch((err) => {
-        console.error("API xato:", err);
-        // Check if it's an auth error
+        console.error("API xatosi:", err);
         if (err.response?.status === 401) {
-             toast.error("Avtorizatsiya xatosi. Qayta kiring.");
+          toast.error("Avtorizatsiya xatosi. Qayta kirish talab qilinadi.");
         } else {
-             toast.error("Ma'lumotni olishda xatolik yuz berdi.");
+          toast.error("Ma'lumot olishda xato.");
         }
-        setselectedAgentData(null);
+        setSelectedAgentData(null);
       });
-      
-      
   }, [SelectID, selectedDate]);
 
-  // Fetch list of agents via WebSocket
-  useEffect(() => {
-  async function fetchAgents() {
-    const accessToken = localStorage.getItem("access_token");
-    if (!accessToken) return;
-
-    try {
-      const res = await axios.get("https://gps.mxsoft.uz/account/agent-list/", {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
-
-      
-
-      if (res) {
-        setAgents(res.data.results);// optional: agar filtrlash kerak bo‘lsa
-        
-      } else {
-        toast.error("Agentlar ro‘yxatini olishda xatolik");
-      }
-    } catch (error) {
-      console.error("❌ Agentlar ro‘yxatini olishda xatolik:", error);
-      toast.error("API dan ma'lumot olishda xatolik");
-    }
-  }
-
-  fetchAgents();
-}, []);
-
-  // Initialize the map
+  // Xaritani boshlash
   useEffect(() => {
     if (!mapRef.current) {
       mapRef.current = L.map("map").setView([41.3111, 69.2797], 11);
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: "&copy; OpenStreetMap contributors",
-      }).addTo(mapRef.current);
+      const tileUrl = theme === "dark"
+        ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+        : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
+      const attribution = theme === "dark"
+        ? '&copy; <a href="https://carto.com/">CartoDB</a>'
+        : '&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a>';
+      L.tileLayer(tileUrl, { attribution }).addTo(mapRef.current);
     }
-
-    // Cleanup function to remove map on unmount (optional but good practice)
     return () => {
-        if (mapRef.current) {
-             mapRef.current.remove();
-             mapRef.current = null;
-        }
-    }
-  }, []);
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
+    };
+  }, [theme]);
 
-  // Update map layers when selectedAgentData changes
+  // Xaritani yangilash
   useEffect(() => {
     if (!selectedAgentData || !mapRef.current) return;
+    const { agent, location_history, contracts, date, payments, notes, clients, call_history } = selectedAgentData;
 
-    const { agent, location_history, contracts, date, payments, notes,clients ,call_history } = selectedAgentData;
-
-    if (!location_history?.length) {
-        toast.error(`${agent.first_name} uchun location_history mavjud emas!`);
-        return;
-    }
-
-    // Clear existing layers
+    // Markerlarni tozalash
     [polylineRef, startMarkerRef, endMarkerRef].forEach((ref) => {
       if (ref.current) mapRef.current!.removeLayer(ref.current);
     });
-    [...stopMarkersRef.current, ...clientMarkersRef.current].forEach((marker) =>
-      mapRef.current!.removeLayer(marker)
-    );
+    [...stopMarkersRef.current, ...clientMarkersRef.current].forEach((m) => mapRef.current!.removeLayer(m));
     stopMarkersRef.current = [];
     clientMarkersRef.current = [];
 
-    // Create path and polyline
+    // Marshrut
     const path: L.LatLngTuple[] = location_history.map((l) => [l.latitude, l.longitude]);
     polylineRef.current = L.polyline(path, { color: "blue" }).addTo(mapRef.current);
 
-    // --- START MARKER WITH MODAL BUTTON ---
+    // Boshlanish markeri
     const startLatLng: L.LatLngTuple = path[0];
-
-    // Create a DOM element for the popup content
-    const startPopupContent = document.createElement('div');
-    startPopupContent.innerHTML = `
-      <div>
-        <strong>👤 ${agent.first_name}</strong><br/>
-        📞 ${agent.phone_number}<br/>
-        🕓 ${new Date(date).toLocaleString()}<br/>
-        <button id="open-modal-btn-${agent.id}" class="leaflet-modal-button" style="margin-top: 5px; padding: 4px 8px; background-color: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">
-          Batafsil
-        </button>
-      </div>
-    `;
-
-    const start = L.marker(startLatLng, { icon: greenIcon }).addTo(mapRef.current);
-    start.bindPopup(startPopupContent); // Bind the DOM element
-
-    // IMPORTANT: Add event listener after the popup opens
-    start.on('popupopen', () => {
-        // Use a slight delay to ensure the DOM is fully rendered
-        setTimeout(() => {
-            const button = document.getElementById(`open-modal-btn-${agent.id}`);
-            if (button) {
-                // Remove any existing event listener to prevent duplicates
-                button.replaceWith(button.cloneNode(true));
-                const newButton = document.getElementById(`open-modal-btn-${agent.id}`);
-                if (newButton) {
-                    newButton.addEventListener('click', () => {
-                       setModalData({
-  name: agent.first_name,
-  phone: agent.phone_number,
-  date: date,
-  // Quyidagi xususiyatlar modalData turida yo'q!
-  payments: payments,
-  notes: notes,
-  clients: clients,
-  call_history: call_history
-});
-                        setIsModalOpen(true);
-                        // Optionally close the popup after opening the modal
-                        // mapRef.current?.closePopup();
-                    });
-                }
-            } else {
-                 console.warn(`Tugma topilmadi: open-modal-btn-${agent.id}`);
-            }
-        }, 150); // Increased timeout slightly
-    });
-
+    const start = L.marker(startLatLng, {
+      icon: L.icon({
+        iconUrl: "https://maps.google.com/mapfiles/ms/icons/green-dot.png",
+        iconSize: [36, 36],
+        iconAnchor: [18, 36],
+      }),
+    }).addTo(mapRef.current);
     startMarkerRef.current = start;
-    // --- END START MARKER ---
 
-    // END MARKER
+    // Tugash markeri
     const endLatLng: L.LatLngTuple = path[path.length - 1];
-    const end = L.marker(endLatLng, { icon: redIcon })
-      .addTo(mapRef.current)
-      .bindPopup(
-        `📍 Tugash nuqtasi<br/>📞 ${agent.phone_number}<br/>📏 Masofa: ${totalDistance(
-          location_history
-        )} km`
-      );
+    const end = L.marker(endLatLng, {
+      icon: L.icon({
+        iconUrl: "https://maps.google.com/mapfiles/ms/icons/red-dot.png",
+        iconSize: [32, 32],
+        iconAnchor: [16, 32],
+      }),
+    }).addTo(mapRef.current);
     endMarkerRef.current = end;
 
-    // STOP MARKERS
+    // To'xtash markerlari
     location_history.forEach((loc, i) => {
       if (loc.is_stop) {
         const dist = totalDistance(location_history.slice(0, i + 1));
-        const marker = L.marker([loc.latitude, loc.longitude], { icon: yellowIcon })
+        const marker = L.marker([loc.latitude, loc.longitude], {
+          icon: L.icon({
+            iconUrl: "https://maps.google.com/mapfiles/ms/icons/yellow-dot.png",
+            iconSize: [32, 32],
+            iconAnchor: [16, 32],
+          }),
+        })
           .addTo(mapRef.current!)
           .bindPopup(`To'xtash nuqtasi<br/>🧭 ${dist.toFixed(2)} km`);
         stopMarkersRef.current.push(marker);
       }
     });
 
-    // CLIENT MARKERS
+    // Mijoz markerlari
     contracts?.forEach((c) => {
       c.client.static_locations.forEach((loc) => {
         const marker = L.marker([loc.lat, loc.lon], {
@@ -419,249 +311,179 @@ const [modalData, setModalData] = useState<ModalData | null>(null);
       });
     });
 
-    // Fit map bounds to the polyline
     mapRef.current.fitBounds(polylineRef.current.getBounds());
-  }, [selectedAgentData]); // Re-run effect when selectedAgentData changes
+  }, [selectedAgentData]);
+
+  // "Batafsil" tugmasi bosilganda modal ochish
+  const openModal = () => {
+    if (!selectedAgentData) return;
+    const { agent, payments, notes, clients, call_history, date } = selectedAgentData;
+    setModalData({
+      name: agent.first_name,
+      phone: agent.phone_number,
+      date,
+      payments,
+      notes,
+      clients,
+      call_history,
+    });
+    setIsModalOpen(true);
+  };
 
   return (
-    <div>
-      <div className="agents-head space-y-2">
-
-  {/* SELECT */}
-  <select
-    className="select-style"
-    onChange={(e) => {
-      const index = Number(e.target.value);
-      const agent = agents[index];
-      if (agent) setSelectID(agent.id);
-    }}
-    defaultValue=""
-  >
-    <option value="" disabled>
-      Agentni tanlang
-    </option>
-    {agents.map((a, i) => (
-      <option key={i} value={i}>
-        {a.first_name}
-      </option>
-    ))}
-  </select>
-
-  {/* TELEFON, START_TIME, END_TIME (har doim ko'rinadi) */}
-  <div style={{
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    padding: '8px 12px',
-    backgroundColor: '#f9f9f9',
-    borderRadius: '6px',
-    fontSize: '14px',
-    color: 'black',
-    fontWeight: 500
-  }}>
-    📞
-    {SelectID
-      ? agents.find(a => a.id === SelectID)?.phone_number || 'Noma\'lum'
-      : 'Agentni tanlang'
-    }
-    &nbsp;|&nbsp;
-    ⏰
-    {SelectID
-      ? (() => {
-          const start = agents.find(a => a.id === SelectID)?.start_time;
-          return start
-            ? new Date(start).toLocaleString('uz-UZ', {
-                day: '2-digit',
-                month: '2-digit',
-                year: '2-digit',
-                hour: '2-digit',
-                minute: '2-digit'
-              }).replace(/\//g, '.')
-            : 'Boshlanish vaqti yo‘q';
-        })()
-      : 'Boshlanish vaqti'
-    }
-    &nbsp;|&nbsp;
-    ⏰
-    {SelectID
-      ? (() => {
-          const end = agents.find(a => a.id === SelectID)?.end_time;
-          return end
-            ? new Date(end).toLocaleString('uz-UZ', {
-                day: '2-digit',
-                month: '2-digit',
-                year: '2-digit',
-                hour: '2-digit',
-                minute: '2-digit'
-              }).replace(/\//g, '.')
-            : 'Tugash vaqti yo‘q';
-        })()
-      : 'Tugash vaqti'
-    }
-  </div>
-
-  {/* SANA TANLASH TUGMASI */}
-  <Button onClick={() => setShowCalendar(!showCalendar)}>📅 Sana tanlash</Button>
-
-  {/* MASOFA VA SANA (faqat selectedAgentData mavjud bo'lsa) */}
-  {selectedAgentData?.location_history ? (
-    <div style={{
-      padding: '8px 12px',
-      backgroundColor: '#e0f7fa',
-      borderRadius: '6px',
-      fontSize: '14px',
-      color: '#006064',
-      fontWeight: 500,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center'
-    }}>
-      📏 <strong>Masofa:</strong> {totalDistance(selectedAgentData.location_history)} km
-      &nbsp;|&nbsp;
-      <strong>Sana:</strong> {new Date(selectedAgentData.date).toLocaleDateString('uz-UZ')}
-    </div>
-  ) : (
-    <div style={{
-      padding: '8px 12px',
-      backgroundColor: '#e0f7fa',
-      borderRadius: '6px',
-      fontSize: '14px',
-      color: '#006064',
-      fontWeight: 500,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center'
-    }} >
-      📏 <strong>Masofa: 0 {"\u00A0"}</strong>&nbsp;|&nbsp;
-      <strong>Sana:{"\u00A0"}</strong> {selectedDate ? selectedDate.toLocaleDateString('uz-UZ') : new Date().toLocaleDateString('uz-UZ')}
-    </div>
-  )}
-
-  {/* KALENDAR */}
-  <div className="calendar-navbar">
-    {showCalendar && (
-      <Calendar
-        mode="single"
-        selected={selectedDate}
-        onSelect={(date) => {
-          setSelectedDate(date);
-          setShowCalendar(false);
-        }}
-        className="rounded-md border shadow-sm"
-        captionLayout="dropdown"
-      />
-    )}
-  </div>
-</div>
-
-      <div id="map" style={{ height: "500px", width: "100%", marginTop: "1rem" }}></div>
-
-      {/* MODAL */}
-       {/* MODAL - Updated to show payments */}
- {/* MODAL - Updated to show all data */}
-{isModalOpen && modalData && (
-  <div className="modal-overlay" onClick={() => setIsModalOpen(false)}>
-    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-      <button className="modal-close" onClick={() => setIsModalOpen(false)}>
-        &times;
-      </button>
-      <h2>Agent Malumotlari</h2>
-      <div className="modal-body">
-        <p><strong>Ism:</strong> {modalData.name}</p>
-        <p><strong>Telefon:</strong> {modalData.phone}</p>
-        <p><strong>Sana:</strong> {new Date(modalData.date).toLocaleDateString()}</p>
-
-        {/* Payments Section */}
-        <h3>Tolovlar:</h3>
-        {/* Tekshiruv: modalData.payments mavjudmi va uzunligi 0 dan kattami? */}
-        {modalData.payments && modalData.payments.length > 0 ? (
-          <ul>
-            {modalData.payments.map((payment) => (
-              <li key={payment.id} style={{ marginBottom: '10px', padding: '5px', border: '1px solid #eee', borderRadius: '4px' }}>
-                <strong>ID:</strong> {payment.id} <br />
-                <strong>Miqdori:</strong> {payment.amount} <br />
-                <strong>Shartnoma ID:</strong> {payment.contract_id} <br />
-                <strong>Shartnoma Raqami:</strong> {payment.contract_number} <br />
-                <strong>Mijoz ID:</strong> {payment.client_id} <br />
-                <strong>Tolangan vaqti:</strong> {new Date(payment.paid_at).toLocaleString()} <br />
-                <strong>Eslatma ID:</strong> {payment.note_id ?? 'N/A'} <br />
-                <strong>Eslatma:</strong> {payment.note_comment ?? 'N/A'}
-              </li>
+    <div className="flex">
+      {/* CHAP TOMON XARITA */}
+      <div style={{ width: "100%", height: "100vh", position: "relative" }}>
+        <div className={`agents-head space-y-2 p-4 ${theme === "dark" ? "bg-gray-800" : "bg-gray-100"}`}>
+          {/* SELECT */}
+          <select
+            className={`select-style w-full p-2 rounded ${theme === "dark" ? "bg-gray-700 text-white" : "bg-white text-black"}`}
+            onChange={(e) => {
+              const index = Number(e.target.value);
+              const agent = agents[index];
+              if (agent) setSelectID(agent.id);
+            }}
+            defaultValue=""
+          >
+            <option value="" disabled>Agentni tanlang</option>
+            {agents.map((a, i) => (
+              <option key={i} value={i}>{a.first_name}</option>
             ))}
-          </ul>
-        ) : (
-          <p>Tolovlar mavjud emas.</p>
-        )}
+          </select>
 
-        {/* Notes Section */}
-        <h3>Eslatmalar:</h3>
-         {/* Tekshiruv: modalData.notes mavjudmi va uzunligi 0 dan kattami? */}
-        {modalData.notes && modalData.notes.length > 0 ? (
-          <ul>
-             {modalData.notes.map((note) => (
-              <li key={note.id} style={{ marginBottom: '10px', padding: '5px', border: '1px solid #eee', borderRadius: '4px' }}>
-                <strong>ID:</strong> {note.id} <br />
-                <strong>Izoh:</strong> {note.comment} <br />
-                <strong>Shartnoma ID:</strong> {note.contract_id} <br />
-                <strong>Shartnoma Raqami:</strong> {note.contract_number} <br />
-                <strong>Mijoz ID:</strong> {note.client_id} <br />
-                <strong>Yaratilgan vaqti:</strong> {new Date(note.created_at).toLocaleString()}
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p>Eslatmalar mavjud emas.</p>
-        )}
+          {/* TELEFON, VAQT */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '8px 12px',
+            backgroundColor: theme === "dark" ? "#1f2937" : "#f9f9f9",
+            borderRadius: '6px',
+            fontSize: '14px',
+            color: theme === "dark" ? "white" : "black",
+            fontWeight: 500
+          }}>
+            📞 {SelectID ? agents.find(a => a.id === SelectID)?.phone_number || 'Noma\'lum' : 'Tanlang'}
+            &nbsp;|&nbsp;
+            ⏰ {SelectID ? 'Boshlanish: ...' : 'Boshlanish'}
+            &nbsp;|&nbsp;
+            ⏰ {SelectID ? 'Tugash: ...' : 'Tugash'}
+          </div>
 
-        {/* Clients Section */}
-        <h3>Xaridorlar:</h3>
-         {/* Tekshiruv: modalData.clients mavjudmi va uzunligi 0 dan kattami? */}
-        {modalData.clients && modalData.clients.length > 0 ? (
-          <ul>
-            {modalData.clients.map((client) => (
-              <li key={client.id} style={{ marginBottom: '10px', padding: '5px', border: '1px solid #eee', borderRadius: '4px' }}>
-                <strong>ID:</strong> {client.id} <br />
-                <strong>Ism:</strong> {client.full_name} <br />
-                {/* <strong>Longitude:</strong> {client.longitude} <br />
-                <strong>Latitude:</strong> {client.latitude} <br /> */}
-                <strong>Qarz (1C):</strong> {client.debt_1c?.toLocaleString() ?? 'N/A'} <br />
-                <strong>Umumiy Qarz (1C):</strong> {client.total_debt_1c?.toLocaleString() ?? 'N/A'} <br />
-                <strong>Shartnoma Summasi (1C):</strong> {client.contract_summary_1c?.toLocaleString() ?? 'N/A'} <br />
-                <strong>Oylik Tolov (1C):</strong> {client.mounthly_payment_1c?.toLocaleString() ?? 'N/A'}
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p>Xaridorlar mavjud emas.</p>
-        )}
+          {/* SANA TANLASH */}
+          <Button onClick={() => setShowCalendar(!showCalendar)}>📅 Sana tanlash</Button>
 
-        {/* Call History Section - Simple List */}
-        {/* Tekshiruv: modalData.call_history mavjudmi va uzunligi 0 dan kattami? */}
-        <h3>Qongiroq Tarixi:</h3>
-        {modalData.call_history && modalData.call_history.length > 0 ? (
-          <ul>
-            {modalData.call_history.map((call) => (
-              <li key={call.id}>
-                <strong>ID:</strong> {call.id} |
-                <strong>Foydalanuvchi:</strong> {call.username} |
-                <strong>Raqam:</strong> {call.phone_number} |
-                <strong>Turi:</strong> {call.call_type} |
-                <strong>Sana:</strong> {new Date(call.call_date).toLocaleDateString()} |
-                <strong>Vaqt (sekund):</strong> {call.time}
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p>Qongiroq tarixi mavjud emas.</p>
-        )}
+          {/* MASOFA, SANA VA BATAFSIL */}
+          <Button
+              onClick={openModal}
+              disabled={!SelectID || !selectedAgentData}
+              className="text-xs py-1 px-3"
+              style={{
+                opacity: SelectID && selectedAgentData ? 1 : 0.5,
+                cursor: SelectID && selectedAgentData ? 'pointer' : 'not-allowed'
+              }}
+            >
+              📄 Batafsil
+            </Button>
 
+          {/* KALENDAR */}
+          {showCalendar && (
+            <Calendar
+              mode="single"
+              selected={selectedDate}
+              onSelect={(date) => {
+                setSelectedDate(date);
+                setShowCalendar(false);
+              }}
+              className="rounded-md border shadow-sm mt-2 calendar-navbar"
+              captionLayout="dropdown"
+            />
+          )}
+        </div>
+
+        <div id="map" style={{ height: "calc(100vh - 200px)", width: "100%" }}></div>
       </div>
-    </div>
-  </div>
-)}
-{/* END MODAL */}
-{/* END MODAL */}
-      {/* END MODAL */}
+
+      {/* O'NG TOMON MODAL (to'liq o'ng tomonda) */}
+      {isModalOpen && modalData && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          right: 0,
+          width: '50%',
+          height: '100vh',
+          backgroundColor: theme === "dark" ? "#1f2937" : "white",
+          color: theme === "dark" ? "white" : "black",
+          borderLeft: theme === "dark" ? "1px solid #374151" : "1px solid #d1d5db",
+          boxShadow: '-2px 0 5px rgba(0,0,0,0.1)',
+          overflowY: 'auto',
+          zIndex: 1000,
+          padding: '20px',
+          display: 'flex',
+          flexDirection: 'column'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <h2 className="text-xl font-bold">Agent Ma'lumotlari</h2>
+            <button
+              onClick={() => setIsModalOpen(false)}
+              style={{
+                background: 'none',
+                border: 'none',
+                fontSize: '24px',
+                cursor: 'pointer',
+                color: theme === "dark" ? "#d1d5db" : "#374151"
+              }}
+            >
+              &times;
+            </button>
+          </div>
+
+          <div className="space-y-4">
+            <p><strong>Ism:</strong> {modalData.name}</p>
+            <p><strong>Telefon:</strong> {modalData.phone}</p>
+            <p><strong>Sana:</strong> {new Date(modalData.date).toLocaleDateString()}</p>
+
+            {/* Tolovlar */}
+            <div>
+              <h3 className="font-semibold text-lg">To'lovlar</h3>
+              {modalData.payments && modalData.payments.length > 0 ? (
+                <ul className="space-y-2">
+                  {modalData.payments.map((p) => (
+                    <li key={p.id} className="p-3 border rounded bg-gray-50 dark:bg-gray-700">
+                      <strong>ID:</strong> {p.id} | <strong>Miqdor:</strong> {p.amount} | <strong>Raqam:</strong> {p.contract_number}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p>To'lov mavjud emas.</p>
+              )}
+            </div>
+
+            {/* Eslatmalar */}
+            <div>
+              <h3 className="font-semibold text-lg">Eslatmalar</h3>
+              {modalData.notes && modalData.notes.length > 0 ? (
+                <ul className="space-y-2">
+                  {modalData.notes.map((n) => (
+                    <li key={n.id} className="p-3 border rounded bg-gray-50 dark:bg-gray-700">
+                      <strong>ID:</strong> {n.id} | <strong>Izoh:</strong> {n.comment} | <strong>Shartnoma:</strong> {n.contract_number}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p>Eslatma mavjud emas.</p>
+              )}
+            </div>
+             <div>
+        <h3 className="font-semibold text-lg">Yurilgan Masofa</h3>
+        <p className="p-3 border rounded bg-blue-50 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
+          📏 <strong>Jami masofa:</strong> {selectedAgentData?.location_history ? totalDistance(selectedAgentData.location_history) : 0} km
+        </p>
+      </div>
+
+          </div>
+        </div>
+      )}
     </div>
   );
 };
