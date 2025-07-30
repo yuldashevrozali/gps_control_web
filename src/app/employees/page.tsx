@@ -217,9 +217,13 @@ const AllEmployees = () => {
                   <Image
                     src="/img/user.png"
                     alt="Avatar"
-                    width={36}
-                    height={36}
-                    style={{ width: "auto", height: "auto" }}
+                    width={60}
+                    height={70}
+                    style={{
+  borderRadius: "50%",
+  objectFit: "cover"      // rasm sifatini saqlaydi va to‘g‘ri joylashtiradi
+}}
+
                     className="rounded-full"
                   />
                   {agent.first_name}
