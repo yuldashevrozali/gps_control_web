@@ -56,6 +56,7 @@ type Agent = {
   date_joined: string;
   first_name:string;
   start_time: string; // Yangi qo'shilgan
+  end_time:string;
 };
 
 type Payment = {
@@ -467,21 +468,42 @@ const [modalData, setModalData] = useState<ModalData | null>(null);
     color: 'black',
     fontWeight: 500
   }}>
-    📞 {agents.find(a => a.id === SelectID)?.phone_number} &nbsp;|&nbsp; 
-    ⏰ {new Date(agents.find(a => a.id === SelectID)?.start_time).toLocaleDateString('uz-UZ', {
-      day: '2-digit',
-      month: '2-digit',
-      year: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
-    }).replace(/\//g, '.')} {/* / ni . bilan almashtirish */}
-    ⏰ {new Date(agents.find(a => a.id === SelectID)?.end_time).toLocaleDateString('uz-UZ', {
-      day: '2-digit',
-      month: '2-digit',
-      year: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
-    }).replace(/\//g, '.')} {/* / ni . bilan almashtirish */}
+    📞 {agents.find(a => a.id === SelectID)?.phone_number} &nbsp;|&nbsp;
+
+{/* start_time */}
+⏰ {
+  (() => {
+    const start = agents.find(a => a.id === SelectID)?.start_time;
+    return start
+      ? new Date(start).toLocaleString('uz-UZ', {
+          day: '2-digit',
+          month: '2-digit',
+          year: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit'
+        }).replace(/\//g, '.')
+      : 'Boshlanish vaqti yo‘q';
+  })()
+}
+
+&nbsp;|&nbsp;
+
+{/* end_time */}
+⏰ {
+  (() => {
+    const end = agents.find(a => a.id === SelectID)?.end_time;
+    return end
+      ? new Date(end).toLocaleString('uz-UZ', {
+          day: '2-digit',
+          month: '2-digit',
+          year: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit'
+        }).replace(/\//g, '.')
+      : 'Tugash vaqti yo‘q';
+  })()
+}
+
   </div>
 )}
 
