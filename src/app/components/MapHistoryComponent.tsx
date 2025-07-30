@@ -12,13 +12,17 @@ import markerIcon from "leaflet/dist/images/marker-icon.png";
 import markerShadow from "leaflet/dist/images/marker-shadow.png";
 
 // Leaflet markerlarni to'g'ri ko'rsatish
-delete (L.Icon.Default.prototype as any)._getIconUrl;
+// Leaflet markerlarni to'g'ri ko'rsatish
+interface LeafletIconDefault extends L.Icon.Default {
+  _getIconUrl?: () => void;
+}
+
+delete (L.Icon.Default.prototype as LeafletIconDefault)._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: markerIcon2x.src,
   iconUrl: markerIcon.src,
   shadowUrl: markerShadow.src,
 });
-
 // TURLAR (TYPES)
 type StaticLocation = { lat: number; lon: number };
 type Client = { full_name: string; phone_number: string; static_locations: StaticLocation[] };
@@ -240,7 +244,7 @@ const MapHistory = () => {
   // Xaritani yangilash
   useEffect(() => {
     if (!selectedAgentData || !mapRef.current) return;
-    const { agent, location_history, contracts, date, payments, notes, clients, call_history } = selectedAgentData;
+    const {  location_history, contracts } = selectedAgentData;
 
     // Markerlarni tozalash
     [polylineRef, startMarkerRef, endMarkerRef].forEach((ref) => {
@@ -423,7 +427,7 @@ const MapHistory = () => {
           flexDirection: 'column'
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <h2 className="text-xl font-bold">Agent Ma'lumotlari</h2>
+            <h2 className="text-xl font-bold">Agent Malumotlari</h2>
             <button
               onClick={() => setIsModalOpen(false)}
               style={{
@@ -445,7 +449,7 @@ const MapHistory = () => {
 
             {/* Tolovlar */}
             <div>
-              <h3 className="font-semibold text-lg">To'lovlar</h3>
+              <h3 className="font-semibold text-lg">Tolovlar</h3>
               {modalData.payments && modalData.payments.length > 0 ? (
                 <ul className="space-y-2">
                   {modalData.payments.map((p) => (
@@ -455,7 +459,7 @@ const MapHistory = () => {
                   ))}
                 </ul>
               ) : (
-                <p>To'lov mavjud emas.</p>
+                <p>Tolov mavjud emas.</p>
               )}
             </div>
 
