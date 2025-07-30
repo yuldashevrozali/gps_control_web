@@ -55,6 +55,7 @@ type Agent = {
   is_working: boolean;
   date_joined: string;
   first_name:string;
+  start_time: string; // Yangi qo'shilgan
 };
 
 type Payment = {
@@ -429,44 +430,80 @@ const [modalData, setModalData] = useState<ModalData | null>(null);
   return (
     <div>
       <div className="agents-head space-y-2">
-        <h2>Agentlar Haritasi</h2>
+  <h2>Agentlar Haritasi</h2>
 
-        <select
-          className="select-style"
-          onChange={(e) => {
-            const index = Number(e.target.value);
-            const agent = agents[index];
-            if (agent) setSelectID(agent.id);
-          }}
-          defaultValue=""
-        >
-          <option value="" disabled>
-            Agentni tanlang
-          </option>
-          {agents.map((a, i) => (
-            <option key={i} value={i}>
-              {a.first_name}
-            </option>
-          ))}
-        </select>
+  {/* SELECT OLDIGA TELEFON RAQAM */}
 
-        <Button onClick={() => setShowCalendar(!showCalendar)}>📅 Sana tanlash</Button>
-        <div className="calendar-navbar">
-          {showCalendar && (
-          <Calendar
-  mode="single"
-  selected={selectedDate}
-  onSelect={(date) => {
-    setSelectedDate(date);
-    setShowCalendar(false); // Kalendarni yopish
-  }}
-  className="rounded-md border shadow-sm"
-  captionLayout="dropdown"
-/>
-        )}
-        </div>
-        
-      </div>
+  
+  {/* SELECT */}
+  <select
+    className="select-style"
+    onChange={(e) => {
+      const index = Number(e.target.value);
+      const agent = agents[index];
+      if (agent) setSelectID(agent.id);
+    }}
+    defaultValue=""
+  >
+    <option value="" disabled>
+      Agentni tanlang
+    </option>
+    {agents.map((a, i) => (
+      <option key={i} value={i}>
+        {a.first_name}
+      </option>
+    ))}
+  </select>
+  {/* Telefon raqam va start_time (bitta satrda) */}
+{SelectID && (
+  <div style={{
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    padding: '8px 12px',
+    backgroundColor: '#f9f9f9',
+    borderRadius: '6px',
+    fontSize: '14px',
+    color: 'black',
+    fontWeight: 500
+  }}>
+    📞 {agents.find(a => a.id === SelectID)?.phone_number} &nbsp;|&nbsp; 
+    ⏰ {new Date(agents.find(a => a.id === SelectID)?.start_time).toLocaleDateString('uz-UZ', {
+      day: '2-digit',
+      month: '2-digit',
+      year: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).replace(/\//g, '.')} {/* / ni . bilan almashtirish */}
+    ⏰ {new Date(agents.find(a => a.id === SelectID)?.end_time).toLocaleDateString('uz-UZ', {
+      day: '2-digit',
+      month: '2-digit',
+      year: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).replace(/\//g, '.')} {/* / ni . bilan almashtirish */}
+  </div>
+)}
+
+  {/* SANA TANLASH TUGMASI */}
+  <Button onClick={() => setShowCalendar(!showCalendar)}>📅 Sana tanlash</Button>
+
+  {/* KALENDAR */}
+  <div className="calendar-navbar">
+    {showCalendar && (
+      <Calendar
+        mode="single"
+        selected={selectedDate}
+        onSelect={(date) => {
+          setSelectedDate(date);
+          setShowCalendar(false);
+        }}
+        className="rounded-md border shadow-sm"
+        captionLayout="dropdown"
+      />
+    )}
+  </div>
+</div>
 
       <div id="map" style={{ height: "500px", width: "100%", marginTop: "1rem" }}></div>
 

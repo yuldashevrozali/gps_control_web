@@ -11,6 +11,8 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MapPin, Users, Activity } from "lucide-react";
+import toast from "react-hot-toast";
+
 
 // Fix for default markers in Leaflet
 delete (L.Icon.Default.prototype as { _getIconUrl?: unknown })._getIconUrl;
@@ -42,6 +44,7 @@ export default function Index() {
   const [selectedAgentData, setSelectedAgentData] = useState<Agent | null>(
     null
   );
+
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>("");
@@ -144,56 +147,88 @@ export default function Index() {
   };
 
   // Update agent location on map
-  const updateAgentOnMap = (agent: Agent) => {
-    const { current_location } = agent;
-    if (!current_location || !current_location.latitude || !current_location.longitude) return;
+  const locationHistoryRef = useRef<Record<string, string[]>>({});
+const warnedAgentsRef = useRef<Set<string>>(new Set());
 
-    // 🔵 Console log for debugging
-    console.log('Agent location updated:', {
-      id: agent.id,
-      name: agent.name,
-      latitude: current_location.latitude,
-      longitude: current_location.longitude,
-      updatedAt: new Date().toLocaleString()
-    });
+const updateAgentOnMap = (agent: Agent) => {
+  const { current_location } = agent;
+  if (!current_location || !current_location.latitude || !current_location.longitude) return;
 
-    const latitude = typeof current_location.latitude === "string"
-      ? parseFloat(current_location.latitude)
-      : current_location.latitude;
-    const longitude = typeof current_location.longitude === "string"
-      ? parseFloat(current_location.longitude)
-      : current_location.longitude;
+  const lat = typeof current_location.latitude === "string"
+    ? parseFloat(current_location.latitude)
+    : current_location.latitude;
 
+  const lng = typeof current_location.longitude === "string"
+    ? parseFloat(current_location.longitude)
+    : current_location.longitude;
 
-  if (!mapRef.current) return;
+  if (!mapRef.current) return;
 
-  // 🔵 LocalStorage'dan avvalgi pathni olish
-  const storedPaths = localStorage.getItem("agentPaths");
-  const parsedPaths: Record<string, [number, number][]> = storedPaths
-    ? JSON.parse(storedPaths)
-    : {};
+  // 🔵 LocalStorage'dan avvalgi pathni olish
+  const storedPaths = localStorage.getItem("agentPaths");
+  const parsedPaths: Record<string, [number, number][]> = storedPaths
+    ? JSON.parse(storedPaths)
+    : {};
 
-  // 🔵 Agent uchun yangilangan path
-  const newPoint: [number, number] = [latitude, longitude];
-  const updatedAgentPath = [...(parsedPaths[agent.id] || []), newPoint];
-  parsedPaths[agent.id] = updatedAgentPath;
+  // 🔵 Agent uchun yangilangan path
+  const newPoint: [number, number] = [lat, lng];
+  const updatedAgentPath = [...(parsedPaths[agent.id] || []), newPoint];
+  parsedPaths[agent.id] = updatedAgentPath;
 
-  // 🔵 LocalStorage'ga saqlash
-  localStorage.setItem("agentPaths", JSON.stringify(parsedPaths));
+  // 🔵 LocalStorage'ga saqlash
+  localStorage.setItem("agentPaths", JSON.stringify(parsedPaths));
 
-  drawPath(updatedAgentPath);
+  // 🔵 Path chizish
+  drawPath(updatedAgentPath);
 
-  // 🔵 Marker joylashuvi
-  if (!markerRefs.current[agent.id]) {
-    const newMarker = L.marker([latitude, longitude]).addTo(mapRef.current);
-    markerRefs.current[agent.id] = newMarker;
-  } else {
-    markerRefs.current[agent.id].setLatLng([latitude, longitude]);
-  }
+  // 🔵 Marker joylashuvi
+  if (!markerRefs.current[agent.id]) {
+    const newMarker = L.marker([lat, lng]).addTo(mapRef.current);
+    markerRefs.current[agent.id] = newMarker;
+  } else {
+    markerRefs.current[agent.id].setLatLng([lat, lng]);
+  }
 
-  // 🔵 Xarita markazga olib kelinadi
-  mapRef.current.setView([latitude, longitude], 15);
+  // 🔵 Xarita markazga olib kelinadi
+  mapRef.current.setView([lat, lng], 15);
+
+  // 🧠 Location history'ni tekshirish
+  const coordStr = `${lat.toFixed(6)},${lng.toFixed(6)}`;
+  const history = locationHistoryRef.current[agent.id] || [];
+  history.push(coordStr);
+  if (history.length > 1200) history.shift(); // faqat oxirgi 5 ta
+
+  locationHistoryRef.current[agent.id] = history;
+
+  const allSame = history.length === 1200 && history.every((loc) => loc === history[0]);
+
+  if (allSame && !warnedAgentsRef.current.has(agent.id)) {
+    toast("Agent 10 soniyadan beri bir joyda turibdi", {
+  icon: "⚠️",
+  style: {
+    background: "#fff7e6",
+    border: "1px solid #ffc107",
+    color: "#333",
+  },
+});
+
+    warnedAgentsRef.current.add(agent.id);
+  }
+
+  if (!allSame && warnedAgentsRef.current.has(agent.id)) {
+    warnedAgentsRef.current.delete(agent.id);
+  }
+
+  // 🔵 Console log (ixtiyoriy)
+  console.log("Agent joylashuvi yangilandi:", {
+    id: agent.id,
+    name: agent.name,
+    lat,
+    lng,
+    time: new Date().toLocaleString(),
+  });
 };
+
 
 
 const pathRef = useRef<L.Polyline | null>(null);
