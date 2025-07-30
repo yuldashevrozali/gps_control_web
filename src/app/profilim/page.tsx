@@ -49,7 +49,6 @@ export default function Profilim() {
         },
       })
       .then((res) => {
-        console.log(res);
         setUser(res.data);
       })
       .catch((err) => {
@@ -57,7 +56,6 @@ export default function Profilim() {
       });
   }, []);
 
-  console.log(user,40);
   
 
   return (

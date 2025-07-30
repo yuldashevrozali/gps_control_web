@@ -26,10 +26,6 @@ const Login = () => {
   const [captchaValue, setCaptchaValue] = useState<string | null>(null);
 
   const onSubmit = async (data: LoginFormValues) => {
-    console.log("🚀 Login onSubmit ishga tushdi");
-    console.log("📧 Email:", data.email);
-    console.log("🔐 Parol:", data.password ? "[yashirilgan]" : "yo'q");
-    console.log("🧩 CAPTCHA qiymati:", captchaValue);
 
     if (!captchaValue) {
       toast.error("Iltimos, reCAPTCHA ni to'ldiring!");
@@ -47,7 +43,6 @@ const Login = () => {
       const captchaResult = await captchaRes.json();
       if (!captchaResult.success) {
         toast.error("Robot emasligingizni tekshiring!");
-        console.log("reCAPTCHA xato:", captchaResult);
         return;
       }
 

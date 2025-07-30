@@ -30,7 +30,6 @@ const OTPverify = () => {
       return;
     }
 
-    // console.log("OTP is valid:", result.data.otp);
     router.push("/");
     toast.success("Password updated Successfully!");
   };

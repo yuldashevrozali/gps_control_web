@@ -20,7 +20,6 @@ export async function POST(request: NextRequest) {
   if (data.success) {
     return NextResponse.json({ success: true });
   } else {
-    console.log("reCAPTCHA xato:", data["error-codes"]);
     return NextResponse.json(
       { success: false, message: "reCAPTCHA tekshiruvi muvaffaqiyatsiz" },
       { status: 400 }

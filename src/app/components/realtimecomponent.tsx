@@ -105,7 +105,6 @@ export default function Index() {
         }
       );
       const agentList = response.data.results;
-      console.log(agentList, 93);
 
       // Filter agents with valid current_location
       const validAgents = agentList.filter(
@@ -220,13 +219,6 @@ const updateAgentOnMap = (agent: Agent) => {
   }
 
   // 🔵 Console log (ixtiyoriy)
-  console.log("Agent joylashuvi yangilandi:", {
-    id: agent.id,
-    name: agent.name,
-    lat,
-    lng,
-    time: new Date().toLocaleString(),
-  });
 };
 
 

@@ -25,7 +25,6 @@ const ForgotPassword = () => {
   });
 
   const onSubmit = async (data: ForgotPasswordFormValues) => {
-    console.log("Submitted data:", data);
 
     if (data.email) {
       toast.success("Sent successfully");

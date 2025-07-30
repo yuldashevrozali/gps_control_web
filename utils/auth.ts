@@ -6,7 +6,6 @@ import FingerprintJS from "@fingerprintjs/fingerprintjs";
 async function getDeviceId(): Promise<string> {
   const fp = await FingerprintJS.load();
   const result = await fp.get();
-  console.log("📱 Qurilma ID:", result.visitorId);
   return result.visitorId;
 }
 
@@ -22,7 +21,6 @@ export async function loginUser(email: string, password: string): Promise<boolea
       firebase_token: "string", // Agar kerak bo‘lsa, dinamik o‘zgartiring
     };
 
-    console.log("📦 Login payload:", payload);
 
     const response = await axios.post(
       "https://gps.mxsoft.uz/account/login/",
@@ -40,7 +38,6 @@ export async function loginUser(email: string, password: string): Promise<boolea
       localStorage.setItem("access_token", access);
       localStorage.setItem("refresh_token", refresh);
       document.cookie = "loggedIn=true; path=/; max-age=86400; SameSite=Lax; Secure";
-      console.log("✅ Login muvaffaqiyatli, tokenlar saqlandi");
       return true;
     }
 
@@ -80,7 +77,6 @@ export async function getValidAccessToken(): Promise<string | null> {
       if (newAccess && newRefresh) {
         localStorage.setItem("access_token", newAccess);
         localStorage.setItem("refresh_token", newRefresh);
-        console.log("🔄 Tokenlar yangilandi");
         return newAccess;
       }
 
@@ -121,5 +117,4 @@ export function logoutUser() {
   localStorage.removeItem("access_token");
   localStorage.removeItem("refresh_token");
   document.cookie = "loggedIn=; path=/; max-age=0";
-  console.log("🔒 Logout bajarildi");
 }

@@ -217,7 +217,6 @@ const [modalData, setModalData] = useState<ModalData | null>(null);
     clientMarkersRef.current = [];
 
     const formattedDate = selectedDate.toISOString().split("T")[0];
-    console.log("📅 Tanlangan sana:", formattedDate);
 
     axios
       .get("https://gps.mxsoft.uz/payments/agent/daily-detail/", {
@@ -226,7 +225,7 @@ const [modalData, setModalData] = useState<ModalData | null>(null);
       })
       .then((res) => {
         const data = res.data;
-        console.timeLog("⏱️ WebSocket - Jami vaqt", "📥 Ma'lumot kelmoqda");
+
 
         if (!data.location_history || data.location_history.length === 0) {
           toast.error(
@@ -266,11 +265,9 @@ const [modalData, setModalData] = useState<ModalData | null>(null);
         },
       });
 
-      console.log(res,266);
       
 
       if (res) {
-        console.log(res.data.results,267);
         setAgents(res.data.results);// optional: agar filtrlash kerak bo‘lsa
         
       } else {
@@ -308,7 +305,6 @@ const [modalData, setModalData] = useState<ModalData | null>(null);
     if (!selectedAgentData || !mapRef.current) return;
 
     const { agent, location_history, contracts, date, payments, notes,clients ,call_history } = selectedAgentData;
-    console.log("Agent data for map update:", agent);
 
     if (!location_history?.length) {
         toast.error(`${agent.first_name} uchun location_history mavjud emas!`);
@@ -359,7 +355,6 @@ const [modalData, setModalData] = useState<ModalData | null>(null);
                 const newButton = document.getElementById(`open-modal-btn-${agent.id}`);
                 if (newButton) {
                     newButton.addEventListener('click', () => {
-                        console.log("Batafsil tugmasi bosildi"); // Debug log
                        setModalData({
   name: agent.first_name,
   phone: agent.phone_number,
@@ -431,11 +426,7 @@ const [modalData, setModalData] = useState<ModalData | null>(null);
   return (
     <div>
       <div className="agents-head space-y-2">
-  <h2>Agentlar Haritasi</h2>
 
-  {/* SELECT OLDIGA TELEFON RAQAM */}
-
-  
   {/* SELECT */}
   <select
     className="select-style"
@@ -455,8 +446,8 @@ const [modalData, setModalData] = useState<ModalData | null>(null);
       </option>
     ))}
   </select>
-  {/* Telefon raqam va start_time (bitta satrda) */}
-{SelectID && (
+
+  {/* TELEFON, START_TIME, END_TIME (har doim ko'rinadi) */}
   <div style={{
     display: 'flex',
     alignItems: 'center',
@@ -468,47 +459,83 @@ const [modalData, setModalData] = useState<ModalData | null>(null);
     color: 'black',
     fontWeight: 500
   }}>
-    📞 {agents.find(a => a.id === SelectID)?.phone_number} &nbsp;|&nbsp;
-
-{/* start_time */}
-⏰ {
-  (() => {
-    const start = agents.find(a => a.id === SelectID)?.start_time;
-    return start
-      ? new Date(start).toLocaleString('uz-UZ', {
-          day: '2-digit',
-          month: '2-digit',
-          year: '2-digit',
-          hour: '2-digit',
-          minute: '2-digit'
-        }).replace(/\//g, '.')
-      : 'Boshlanish vaqti yo‘q';
-  })()
-}
-
-&nbsp;|&nbsp;
-
-{/* end_time */}
-⏰ {
-  (() => {
-    const end = agents.find(a => a.id === SelectID)?.end_time;
-    return end
-      ? new Date(end).toLocaleString('uz-UZ', {
-          day: '2-digit',
-          month: '2-digit',
-          year: '2-digit',
-          hour: '2-digit',
-          minute: '2-digit'
-        }).replace(/\//g, '.')
-      : 'Tugash vaqti yo‘q';
-  })()
-}
-
+    📞
+    {SelectID
+      ? agents.find(a => a.id === SelectID)?.phone_number || 'Noma\'lum'
+      : 'Agentni tanlang'
+    }
+    &nbsp;|&nbsp;
+    ⏰
+    {SelectID
+      ? (() => {
+          const start = agents.find(a => a.id === SelectID)?.start_time;
+          return start
+            ? new Date(start).toLocaleString('uz-UZ', {
+                day: '2-digit',
+                month: '2-digit',
+                year: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+              }).replace(/\//g, '.')
+            : 'Boshlanish vaqti yo‘q';
+        })()
+      : 'Boshlanish vaqti'
+    }
+    &nbsp;|&nbsp;
+    ⏰
+    {SelectID
+      ? (() => {
+          const end = agents.find(a => a.id === SelectID)?.end_time;
+          return end
+            ? new Date(end).toLocaleString('uz-UZ', {
+                day: '2-digit',
+                month: '2-digit',
+                year: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+              }).replace(/\//g, '.')
+            : 'Tugash vaqti yo‘q';
+        })()
+      : 'Tugash vaqti'
+    }
   </div>
-)}
 
   {/* SANA TANLASH TUGMASI */}
   <Button onClick={() => setShowCalendar(!showCalendar)}>📅 Sana tanlash</Button>
+
+  {/* MASOFA VA SANA (faqat selectedAgentData mavjud bo'lsa) */}
+  {selectedAgentData?.location_history ? (
+    <div style={{
+      padding: '8px 12px',
+      backgroundColor: '#e0f7fa',
+      borderRadius: '6px',
+      fontSize: '14px',
+      color: '#006064',
+      fontWeight: 500,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center'
+    }}>
+      📏 <strong>Masofa:</strong> {totalDistance(selectedAgentData.location_history)} km
+      &nbsp;|&nbsp;
+      <strong>Sana:</strong> {new Date(selectedAgentData.date).toLocaleDateString('uz-UZ')}
+    </div>
+  ) : (
+    <div style={{
+      padding: '8px 12px',
+      backgroundColor: '#e0f7fa',
+      borderRadius: '6px',
+      fontSize: '14px',
+      color: '#006064',
+      fontWeight: 500,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center'
+    }} >
+      📏 <strong>Masofa: 0 {"\u00A0"}</strong>&nbsp;|&nbsp;
+      <strong>Sana:{"\u00A0"}</strong> {selectedDate ? selectedDate.toLocaleDateString('uz-UZ') : new Date().toLocaleDateString('uz-UZ')}
+    </div>
+  )}
 
   {/* KALENDAR */}
   <div className="calendar-navbar">

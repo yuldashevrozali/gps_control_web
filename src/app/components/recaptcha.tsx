@@ -8,11 +8,9 @@ const Recaptcha = ({ onChange }: { onChange: (value: string | null) => void }) =
 <ReCAPTCHA
   sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY!}
   onChange={(val) => {
-    console.log("✅ CAPTCHA to'ldirildi, token:", val);
     onChange(val);
   }}
   onExpired={() => {
-    console.log("❌ CAPTCHA eskirgan");
     onChange(null);
   }}
   hl="uz"

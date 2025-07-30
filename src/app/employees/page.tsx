@@ -86,7 +86,6 @@ const AllEmployees = () => {
 
         if (response) {
           console.timeEnd("⏱️ Agents API dan kelish vaqti");
-          console.log("📥 Agents:", response.data.results);
           setAgents(response.data.results);
           setFilteredAgents(response.data.results);
         } else {

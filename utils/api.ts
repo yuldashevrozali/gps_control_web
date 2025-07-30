@@ -55,7 +55,6 @@ api.interceptors.response.use(
         originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
         return api(originalRequest);
       } catch (err) {
-        console.log("❌ Refresh token ham muddati tugagan.");
         return Promise.reject(err);
       }
     }
