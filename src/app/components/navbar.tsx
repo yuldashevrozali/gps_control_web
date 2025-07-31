@@ -75,7 +75,7 @@ export const Navbar = () => {
   document.cookie = "loggedIn=; path=/; max-age=0";
 
   // ⏩ Login sahifasiga yo‘naltirish
-  router.push("/login");
+  router.push("/index");
 };
   
 

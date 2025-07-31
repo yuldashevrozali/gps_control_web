@@ -7,7 +7,7 @@ import { HydrationProvider } from "react-hydration-provider";
 
 export default function DashboardWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const hideSidebarRoutes = ["/login", "/register"];
+  const hideSidebarRoutes = ["/index", "/register"];
   const hideSidebar = hideSidebarRoutes.includes(pathname);
 
   return (

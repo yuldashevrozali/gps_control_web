@@ -17,7 +17,7 @@ const Settings = () => {
     useEffect(() => {
       const isLoggedIn = getCookie("loggedIn");
       if (isLoggedIn !== "true") {
-        router.push("/login");
+        router.push("/index");
       }
     }, []);
   return <div>Settings</div>;

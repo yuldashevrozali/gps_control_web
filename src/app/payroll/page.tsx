@@ -50,7 +50,7 @@ const Payroll = () => {
   useEffect(() => {
     const isLoggedIn = getCookie("loggedIn");
     if (isLoggedIn !== "true") {
-      router.push("/login");
+      router.push("/index");
     }
   }, []);
   useEffect(() => {
