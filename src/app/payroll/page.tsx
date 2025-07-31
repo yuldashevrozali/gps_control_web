@@ -12,6 +12,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useRouter } from "next/navigation";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"; // Select komponentlarini import qildik
 
 function getCookie(name: string): string | null {
   const value = `; ${document.cookie}`;
@@ -43,9 +50,10 @@ const Payroll = () => {
   const [page, setPage] = useState(1);
   const [firstNameSearch, setFirstNameSearch] = useState("");
   const [dateSearch, setDateSearch] = useState("");
+  // 'all' qiymati agent filtri bo'lmaganda ishlatiladi
+  const [agentSearch, setAgentSearch] = useState("all");
   const router = useRouter();
   const [theme, setTheme] = useState("light");
-
 
   useEffect(() => {
     const isLoggedIn = getCookie("loggedIn");
@@ -53,17 +61,18 @@ const Payroll = () => {
       router.push("/login");
     }
   }, []);
+
   useEffect(() => {
-  const checkThemeChange = () => {
-    const updatedTheme = localStorage.getItem("hrms-theme");
-    setTheme(updatedTheme === "dark" ? "dark" : "light");
-  };
+    const checkThemeChange = () => {
+      const updatedTheme = localStorage.getItem("hrms-theme");
+      setTheme(updatedTheme === "dark" ? "dark" : "light");
+    };
 
-  checkThemeChange(); // ilk yuklanganda
-  const interval = setInterval(checkThemeChange, 10); // har 1 sekundda tekshiradi
+    checkThemeChange(); // Dastlabki yuklanishda tekshiradi
+    const interval = setInterval(checkThemeChange, 10); // Har 10msda tekshiradi
 
-  return () => clearInterval(interval);
-}, []);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     const token = localStorage.getItem("access_token");
@@ -84,6 +93,18 @@ const Payroll = () => {
       .finally(() => setLoading(false));
   }, []);
 
+  // Ma'lumotlardagi noyob agent nomlarini olamiz
+  const uniqueAgents = useMemo(() => {
+    const agents = new Set<string>();
+    data.forEach((item) => {
+      if (item.processed_by_name) {
+        agents.add(item.processed_by_name);
+      }
+    });
+    return Array.from(agents).sort();
+  }, [data]);
+
+  // Filtrlangaan ma'lumotlar
   const filteredData = useMemo(() => {
     return data.filter((item) => {
       const matchName = item.client_first_name
@@ -94,9 +115,13 @@ const Payroll = () => {
         ? new Date(item.paid_at).toISOString().slice(0, 10) === dateSearch
         : true;
 
-      return matchName && matchDate;
+      // Agent filtrlash shartini yangiladik
+      const matchAgent =
+        agentSearch === "all" ? true : item.processed_by_name === agentSearch;
+
+      return matchName && matchDate && matchAgent;
     });
-  }, [data, firstNameSearch, dateSearch]);
+  }, [data, firstNameSearch, dateSearch, agentSearch]);
 
   const totalPages = Math.ceil(filteredData.length / ITEMS_PER_PAGE);
   const currentPageData = filteredData.slice(
@@ -108,14 +133,14 @@ const Payroll = () => {
     <div className="p-6">
       <h2 className="text-2xl font-bold mb-4">🧾 Tolovlar Jadvali</h2>
 
-      {/* 🔍 Search filters */}
+      {/* 🔍 Qidiruv filtrlari */}
       <div className="flex flex-wrap gap-4 mb-4">
         <Input
           placeholder="👤 Ism bo‘yicha qidirish"
           value={firstNameSearch}
           onChange={(e) => {
             setFirstNameSearch(e.target.value);
-            setPage(1);
+            setPage(1); // Filtr o'zgarganda sahifani 1-ga qaytarish
           }}
           className="w-64"
         />
@@ -124,22 +149,46 @@ const Payroll = () => {
           value={dateSearch}
           onChange={(e) => {
             setDateSearch(e.target.value);
-            setPage(1);
+            setPage(1); // Filtr o'zgarganda sahifani 1-ga qaytarish
           }}
           className="w-48"
         />
+
+        {/* Agent Select (Dropdown) */}
+        <Select
+          value={agentSearch} // Agent qidiruv qiymati bilan bog'laymiz
+          onValueChange={(value) => {
+            setAgentSearch(value);
+            setPage(1); // Filtr o'zgarganda sahifani 1-ga qaytarish
+          }}
+        >
+          <SelectTrigger className="w-64">
+            <SelectValue placeholder="👤 Agent bo‘yicha qidirish" />
+          </SelectTrigger>
+          <SelectContent>
+            {/* "Barchasi" opsiyasi uchun qiymatni "all" qilib o'zgartirdik */}
+            <SelectItem value="all">Barchasi</SelectItem>{" "}
+            {uniqueAgents.map((agent) => (
+              <SelectItem key={agent} value={agent}>
+                {agent}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {loading ? (
         <p>⏳ Yuklanmoqda…</p>
       ) : filteredData.length === 0 ? (
-        <p>🚫 Malumot topilmadi</p>
+        <p>🚫 Ma'lumot topilmadi</p>
       ) : (
         <>
           <div className="overflow-x-auto border rounded-lg">
             <Table className="w-full text-sm border-collapse border border-gray-300">
               <TableHeader>
-                <TableRow className={theme === "dark" ? "bg-gray-800" : "bg-gray-100"}>
+                <TableRow
+                  className={theme === "dark" ? "bg-gray-800" : "bg-gray-100"}
+                >
                   <TableHead className="border border-gray-300">
                     👤 Xaridorlar
                   </TableHead>
@@ -150,10 +199,10 @@ const Payroll = () => {
                     💰 Summa
                   </TableHead>
                   <TableHead className="border border-gray-300">
-                    📅 Tolov sanasi
+                    📅 To'lov sanasi
                   </TableHead>
                   <TableHead className="border border-gray-300">
-                    💳 Tolov turi
+                    💳 To'lov turi
                   </TableHead>
                   <TableHead className="border border-gray-300">
                     ✅ Holati
@@ -180,7 +229,6 @@ const Payroll = () => {
                         .toLocaleString("en-US")
                         .replace(/,/g, " ")}
                     </TableCell>
-
                     <TableCell className="border border-gray-300">
                       {new Date(item.paid_at).toLocaleString("uz-UZ", {
                         year: "numeric",
@@ -194,10 +242,10 @@ const Payroll = () => {
                       {item.method === "CLICK"
                         ? "Click"
                         : item.method === "CASH"
-                          ? "Naqd"
-                          : item.method === "CARD"
-                            ? "Karta"
-                            : item.method}
+                        ? "Naqd"
+                        : item.method === "CARD"
+                        ? "Karta"
+                        : item.method}
                     </TableCell>
                     <TableCell className="border border-gray-300">
                       {item.is_successful ? "✅" : "❌"}
@@ -211,7 +259,7 @@ const Payroll = () => {
                   </TableRow>
                 ))}
 
-                {/* Jadvalni 10 qatordan to‘ldirish */}
+                {/* Jadvalni 10 qatordan to‘ldirish uchun bo‘sh qatorlar */}
                 {Array.from({
                   length: ITEMS_PER_PAGE - currentPageData.length,
                 }).map((_, idx) => (
@@ -230,7 +278,7 @@ const Payroll = () => {
             </Table>
           </div>
 
-          {/* Pagination */}
+          {/* Sahifalashtirish (Pagination) */}
           <div className="mt-4 flex justify-center gap-4">
             <Button
               onClick={() => setPage((p) => Math.max(p - 1, 1))}
