@@ -115,7 +115,7 @@ const Candidates = () => {
     // Teglar va ularning tarjimalari
     const tegMap: { [key: string]: string } = {
       PROMISED: "Vada berdi",
-      UNREACHABLE: "Berishi mumkin",
+      UNREACHABLE: "Boglanib bolmadi",
       NOANSWER: "Javob bermadi",
     };
     // Tartiblash va tarjima qilish
