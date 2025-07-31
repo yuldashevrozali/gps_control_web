@@ -32,9 +32,8 @@ type Agent = {
   phone_number: string;
   id: number;
   status: boolean;
-  user_type: string;
-  first_name:string;
-  type?: string;
+  first_name: string;
+  email: string; // 🔹 YANGI: email maydoni
 };
 
   function getCookie(name: string): string | null {
@@ -192,70 +191,68 @@ const AllEmployees = () => {
       </div>
 
       <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Agent Ismi</TableHead>
-            <TableHead>ID</TableHead>
-            <TableHead>Telefon</TableHead>
-            <TableHead>Lavozim</TableHead>
-            <TableHead>Turi</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Harakat</TableHead>
-          </TableRow>
-        </TableHeader>
+<TableHeader>
+  <TableRow>
+    <TableHead>Agent Ismi</TableHead>
+    <TableHead>ID</TableHead>
+    <TableHead>Telefon</TableHead>
+    <TableHead>Email</TableHead> {/* 🔹 Email ustuni */}
+    <TableHead>Status</TableHead>
+    <TableHead>Harakat</TableHead>
+  </TableRow>
+</TableHeader>
         <TableBody>
-          {paginatedAgents.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={7} className="text-center text-gray-500">
-                No results found
-              </TableCell>
-            </TableRow>
+  {paginatedAgents.length === 0 ? (
+    <TableRow>
+      <TableCell colSpan={6} className="text-center text-gray-500">
+        No results found
+      </TableCell>
+    </TableRow>
+  ) : (
+    paginatedAgents.map((agent, idx) => (
+      <TableRow key={idx}>
+        <TableCell className="flex items-center gap-2">
+          <Image
+            src="/icons/user887.png"
+            alt="Avatar"
+            width={60}
+            height={70}
+            style={{
+              borderRadius: "50%",
+              objectFit: "cover"
+            }}
+            className="rounded-full"
+          />
+          {agent.first_name}
+        </TableCell>
+        <TableCell>{agent.id}</TableCell>
+        <TableCell>+{agent.phone_number}</TableCell>
+        <TableCell>{agent.email ? agent.email : "Email yo'q"}</TableCell>
+ {/* 🔹 Email qiymati */}
+        <TableCell>
+          {agent.status ? (
+            <span className="badge badge-sm bg-gradient-success text-white">
+              Online
+            </span>
           ) : (
-            paginatedAgents.map((agent, idx) => (
-              <TableRow key={idx}>
-                <TableCell className="flex items-center gap-2">
-                  <Image
-                    src="/icons/user887.png"
-                    alt="Avatar"
-                    width={60}
-                    height={70}
-                    style={{
-  borderRadius: "50%",
-  objectFit: "cover"      // rasm sifatini saqlaydi va to‘g‘ri joylashtiradi
-}}
-
-                    className="rounded-full"
-                  />
-                  {agent.first_name}
-                </TableCell>
-                <TableCell>{agent.id}</TableCell>
-                <TableCell>+{agent.phone_number}</TableCell>
-                <TableCell>{agent.user_type}</TableCell>
-                <TableCell>{agent.type || "Office"}</TableCell>
-                <TableCell>
-                  {agent.status ? (
-                    <span className="badge badge-sm bg-gradient-success text-white">
-                      Online
-                    </span>
-                  ) : (
-                    <span className="badge badge-sm bg-gradient-secondary text-white">
-                      Offline
-                    </span>
-                  )}
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-2 h-full">
-                    <Eye className="w-4 h-4 cursor-pointer hover:text-purple-600" />
-                    <Pencil
-                      className="w-4 h-4 cursor-pointer hover:text-yellow-500"
-                      onClick={() => openEditModal(agent)}
-                    />
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))
+            <span className="badge badge-sm bg-gradient-secondary text-white">
+              Offline
+            </span>
           )}
-        </TableBody>
+        </TableCell>
+        <TableCell>
+          <div className="flex items-center gap-2 h-full">
+            <Eye className="w-4 h-4 cursor-pointer hover:text-purple-600" />
+            <Pencil
+              className="w-4 h-4 cursor-pointer hover:text-yellow-500"
+              onClick={() => openEditModal(agent)}
+            />
+          </div>
+        </TableCell>
+      </TableRow>
+    ))
+  )}
+</TableBody>
         <TableFooter>
           <TableRow>
             <TableCell colSpan={7}>

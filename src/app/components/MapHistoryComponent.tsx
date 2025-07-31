@@ -322,6 +322,8 @@ const MapHistory = () => {
   const openModal = () => {
     if (!selectedAgentData) return;
     const { agent, payments, notes, clients, call_history, date } = selectedAgentData;
+    console.log("Barcha to'lovlar:", payments);
+    console.log("Barcha to'lovlar:", notes);
     setModalData({
       name: agent.first_name,
       phone: agent.phone_number,
@@ -452,11 +454,16 @@ const MapHistory = () => {
               <h3 className="font-semibold text-lg">Tolovlar</h3>
               {modalData.payments && modalData.payments.length > 0 ? (
                 <ul className="space-y-2">
-                  {modalData.payments.map((p) => (
-                    <li key={p.id} className="p-3 border rounded bg-gray-50 dark:bg-gray-700">
-                      <strong>ID:</strong> {p.id} | <strong>Miqdor:</strong> {p.amount} | <strong>Raqam:</strong> {p.contract_number}
-                    </li>
-                  ))}
+                  {modalData?.payments?.map((payment, index) => (
+  <div key={index} className="border-b py-2">
+    <p><strong>💰 Miqdor:</strong> {payment.amount} som</p>
+    <p><strong>📄 Shartnoma raqami:</strong> {payment.contract_number}</p>
+    <p><strong>👤 Mijoz ID:</strong> {payment.client_id}</p>
+    <p><strong>🕒 To‘langan vaqt:</strong> {new Date(payment.paid_at).toLocaleString()}</p>
+    <p><strong>📝 Izoh:</strong> {payment.note_comment || "Izoh yo'q"}</p>
+  </div>
+))}
+
                 </ul>
               ) : (
                 <p>Tolov mavjud emas.</p>
