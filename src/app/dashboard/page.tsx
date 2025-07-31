@@ -24,7 +24,7 @@ export default function Dashboard() {
   useEffect(() => {
     const isLoggedIn = getCookie("loggedIn");
     if (isLoggedIn !== "true") {
-      router.push("/index");
+      router.push("/login");
     }
   }, []);
 

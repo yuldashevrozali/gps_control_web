@@ -64,7 +64,7 @@ const Candidates = () => {
   useEffect(() => {
     const isLoggedIn = getCookie("loggedIn");
     if (isLoggedIn !== "true") {
-      router.push("/index");
+      router.push("/login");
     } else {
       const token = localStorage.getItem("access_token");
       if (!token) return;

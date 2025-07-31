@@ -39,7 +39,7 @@ const ForgotPassword = () => {
       <div className='min-h-screen flex items-center justify-center px-4'>
         <div className='w-full max-w-md p-8 rounded-2xl space-y-6'>
           <Link
-            href='/index'
+            href='/login'
             className='flex items-center text-blue-600 text-2xl hover:underline'>
             <ChevronLeftIcon className='w-9 h-9 mr-1' />
             Back
