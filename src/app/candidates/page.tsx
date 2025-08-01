@@ -1,6 +1,5 @@
 "use client";
-
-import { useEffect, useMemo, useState } from "react"; // useMemo ni qo'shdik
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import {
@@ -9,9 +8,13 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"; // Select komponentlarini import qildik
-import { Input } from "@/components/ui/input"; // Input komponentini import qildik (style mos kelishi uchun)
-import { Button } from "@/components/ui/button"; // Button komponentini import qildik (style mos kelishi uchun)
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+
+// Excel eksport qilish uchun
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
 
 // Typelar
 interface Client {
@@ -38,6 +41,7 @@ interface Note {
   created_at: string;
   contract: Contract;
   company: Company;
+  processed_by_name: string; // API javobidan keladigan maydon
 }
 
 const Candidates = () => {
@@ -46,10 +50,8 @@ const Candidates = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchName, setSearchName] = useState("");
   const [searchDate, setSearchDate] = useState("");
-  // 'all' qiymati teg filtri bo'lmaganda ishlatiladi
-  const [searchTeg, setSearchTeg] = useState("all"); // Yangi state teg bo'yicha qidirish uchun
-  const [theme, setTheme] = useState("dark"); // Default dark theme
-
+  const [agentSearch, setAgentSearch] = useState("all"); // 'all' — barcha agentlar
+  const [theme, setTheme] = useState("dark");
   const itemsPerPage = 10;
 
   function getCookie(name: string): string | null {
@@ -65,14 +67,12 @@ const Candidates = () => {
       const updatedTheme = localStorage.getItem("hrms-theme");
       setTheme(updatedTheme === "dark" ? "dark" : "light");
     };
-
-    checkThemeChange(); // Dastlabki yuklanishda tekshiradi
-    const interval = setInterval(checkThemeChange, 100); // Har 100msda tekshiradi
-
+    checkThemeChange();
+    const interval = setInterval(checkThemeChange, 100);
     return () => clearInterval(interval);
   }, []);
 
-  // Ma'lumotlarni API dan olish
+  // Ma'lumotlarni olish
   useEffect(() => {
     const isLoggedIn = getCookie("loggedIn");
     if (isLoggedIn !== "true") {
@@ -86,65 +86,46 @@ const Candidates = () => {
       }
       axios
         .get("https://gps.mxsoft.uz/payments/contracts/notes/agent-or-manager/", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
         })
         .then((res) => {
           setNotes(res.data.results || []);
         })
         .catch((err) => {
           console.error("API error fetching notes:", err);
-          // Token eskirgan bo'lsa yoki xato bo'lsa, foydalanuvchini login sahifasiga qaytarish
           if (err.response && err.response.status === 401) {
             localStorage.removeItem("access_token");
             router.push("/login");
           }
         });
     }
-  }, [router]); // router ni dependency array ga qo'shdik
+  }, [router]);
 
-  // Noyob "teg" qiymatlarini olish va ularni o'zbekcha tarjimalari bilan birga saqlash
-  const uniqueTegs = useMemo(() => {
-    const tegs = new Set<string>();
+  // Faqat noyob agentlarni olish
+  const uniqueAgents = useMemo(() => {
+    const agents = new Set<string>();
     notes.forEach((note) => {
-      if (note.teg) {
-        tegs.add(note.teg);
+      if (note.agent_name) {
+        agents.add(note.agent_name);
       }
     });
-    // Teglar va ularning tarjimalari
-    const tegMap: { [key: string]: string } = {
-      PROMISED: "Vada berdi",
-      UNREACHABLE: "Boglanib bolmadi",
-      NOANSWER: "Javob bermadi",
-    };
-    // Tartiblash va tarjima qilish
-    return Array.from(tegs)
-      .sort() // Alifbo bo'yicha tartiblash
-      .map((teg) => ({
-        value: teg,
-        label: tegMap[teg] || teg, // Agar tarjimasi bo'lmasa, asl tegni ishlatish
-      }));
+    return Array.from(agents).sort();
   }, [notes]);
 
-  // 🔍 Filterlangan natijalar (useMemo bilan optimallashtirilgan)
+  // Filtrlangan ma'lumotlar
   const filteredNotes = useMemo(() => {
     return notes.filter((note) => {
       const nameMatch = note.contract.client.first_name
         .toLowerCase()
         .includes(searchName.toLowerCase());
-
       const dateMatch = searchDate
         ? new Date(note.created_at).toISOString().slice(0, 10) === searchDate
         : true;
-
-      // Teg filtrlash sharti
-      const tegMatch =
-        searchTeg === "all" ? true : note.teg === searchTeg;
-
-      return nameMatch && dateMatch && tegMatch;
+      const agentMatch =
+        agentSearch === "all" ? true : note.agent_name === agentSearch;
+      return nameMatch && dateMatch && agentMatch;
     });
-  }, [notes, searchName, searchDate, searchTeg]); // Dependencylar
+  }, [notes, searchName, searchDate, agentSearch]);
 
   const totalPages = Math.ceil(filteredNotes.length / itemsPerPage);
   const paginatedNotes = filteredNotes.slice(
@@ -152,19 +133,53 @@ const Candidates = () => {
     currentPage * itemsPerPage
   );
 
-  // 🔁 Filtrlarni tozalash funksiyasi
+  // Filtrlarni tozalash
   const clearFilters = () => {
     setSearchName("");
     setSearchDate("");
-    setSearchTeg("all"); // Teg filtrini ham tozalash
-    setCurrentPage(1); // Sahifani boshiga qaytarish
+    setAgentSearch("all");
+    setCurrentPage(1);
+  };
+
+  // Excelga eksport qilish
+  const handleExportToExcel = () => {
+    const exportData = filteredNotes.map((note) => ({
+      "Mijoz": `${note.contract.client.first_name} ${note.contract.client.last_name}`,
+      "Izoh": note.comment,
+      "Vada vaqti": note.promised_time
+        ? new Date(note.promised_time).toLocaleDateString("uz-UZ", {
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+          })
+        : "-",
+      "Shartnoma raqami": note.contract.contract_number,
+      "Kompaniya": note.company.name,
+      "Yaratilgan sana": new Date(note.created_at).toLocaleDateString("uz-UZ", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }),
+      "Agent": note.agent_name,
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Zametkalar");
+
+    const agentName = agentSearch === "all" ? "barcha_agentlar" : agentSearch.replace(/\s+/g, "_");
+    const fileName = `zametkalar_${agentName}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+
+    const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+    const blob = new Blob([excelBuffer], { type: "application/octet-stream" });
+    saveAs(blob, fileName);
   };
 
   return (
     <div className="p-4">
-      <h2 className="text-xl font-semibold mb-4">Zametkalar Jadvali</h2>
+      <h2 className="text-xl font-semibold mb-4">📝 Zametkalar Jadvali</h2>
 
-      {/* 🔍 Qidiruv va Filtrlar */}
+      {/* Qidiruv va Filtrlar */}
       <div className="flex flex-col sm:flex-row gap-4 mb-4 items-center">
         <Input
           type="text"
@@ -172,7 +187,7 @@ const Candidates = () => {
           value={searchName}
           onChange={(e) => {
             setSearchName(e.target.value);
-            setCurrentPage(1); // Filtr o'zgarganda sahifani 1-ga qaytarish
+            setCurrentPage(1);
           }}
           className="w-full sm:w-1/3"
         />
@@ -181,28 +196,24 @@ const Candidates = () => {
           value={searchDate}
           onChange={(e) => {
             setSearchDate(e.target.value);
-            setCurrentPage(1); // Filtr o'zgarganda sahifani 1-ga qaytarish
+            setCurrentPage(1);
           }}
           className="w-full sm:w-1/3"
         />
 
-        {/* Teg Select (Dropdown) */}
-        <Select
-          value={searchTeg}
-          onValueChange={(value) => {
-            setSearchTeg(value);
-            setCurrentPage(1); // Filtr o'zgarganda sahifani 1-ga qaytarish
-          }}
-        >
+        {/* Agent bo'yicha qidirish */}
+        <Select value={agentSearch} onValueChange={(value) => {
+          setAgentSearch(value);
+          setCurrentPage(1);
+        }}>
           <SelectTrigger className="w-full sm:w-1/3">
-            <SelectValue placeholder="📝 Teg bo‘yicha qidirish" />
+            <SelectValue placeholder="👤 Agent bo‘yicha qidirish" />
           </SelectTrigger>
           <SelectContent>
-            {/* "Barchasi" opsiyasi uchun qiymatni "all" qilib o'zgartirdik */}
-            <SelectItem value="all">Barchasi</SelectItem>{" "}
-            {uniqueTegs.map((teg) => (
-              <SelectItem key={teg.value} value={teg.value}>
-                {teg.label}
+            <SelectItem value="all">Barchasi</SelectItem>
+            {uniqueAgents.map((agent) => (
+              <SelectItem key={agent} value={agent}>
+                {agent}
               </SelectItem>
             ))}
           </SelectContent>
@@ -216,21 +227,30 @@ const Candidates = () => {
         >
           Filtrlarni tozalash
         </Button>
+
+        {/* Excelga saqlash tugmasi */}
+        <Button
+          onClick={handleExportToExcel}
+          className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 w-full sm:w-auto ml-auto"
+        >
+          📥 Excelga saqlash
+        </Button>
       </div>
 
-      {filteredNotes.length === 0 && !axios.isCancel(null) ? ( // Ma'lumot yuklanmagan va xato bo'lmagan holat
-        <p>Malumotlar yuklanmoqda yoki mavjud emas...</p>
+      {/* Jadval */}
+      {filteredNotes.length === 0 ? (
+        <p className="text-center text-gray-500">🔍 Ma'lumot topilmadi</p>
       ) : (
         <table className="w-full table-auto border border-gray-300">
           <thead>
             <tr className={theme === "dark" ? "bg-gray-800 text-white" : "bg-gray-100 text-black"}>
-              <th className="border px-4 py-2">Mijoz</th>
-              <th className="border px-4 py-2">Teg</th>
-              <th className="border px-4 py-2">Izoh</th>
-              <th className="border px-4 py-2">Vada vaqti</th>
-              <th className="border px-4 py-2">Shartnoma raqami</th>
-              <th className="border px-4 py-2">Kompaniya</th>
-              <th className="border px-4 py-2">Yaratilgan sana</th>
+              <th className="border px-4 py-2">👤 Mijoz</th>
+              <th className="border px-4 py-2">💬 Izoh</th>
+              <th className="border px-4 py-2">⏰ Vada vaqti</th>
+              <th className="border px-4 py-2">📄 Shartnoma raqami</th>
+              <th className="border px-4 py-2">🏢 Kompaniya</th>
+              <th className="border px-4 py-2">📅 Yaratilgan sana</th>
+              <th className="border px-4 py-2">👤 Agent</th>
             </tr>
           </thead>
           <tbody>
@@ -238,20 +258,7 @@ const Candidates = () => {
               const note = paginatedNotes[index];
               return note ? (
                 <tr key={note.id} className="text-sm">
-                  <td className="border px-4 py-2">
-                    {note.contract.client.first_name}{" "}
-                    {note.contract.client.last_name}
-                  </td>
-                  <td className="border px-4 py-2">
-                    {/* Teg tarjimalarini ishlatish */}
-                    {note.teg === "PROMISED"
-                      ? "Vada berdi"
-                      : note.teg === "UNREACHABLE"
-                      ? "Erishib bo'lmaydi"
-                      : note.teg === "NOANSWER"
-                      ? "Javob bermadi"
-                      : note.teg || "-"}
-                  </td>
+                  <td className="border px-4 py-2">{note.contract.client.first_name} {note.contract.client.last_name}</td>
                   <td className="border px-4 py-2">{note.comment}</td>
                   <td className="border px-4 py-2">
                     {note.promised_time
@@ -262,9 +269,7 @@ const Candidates = () => {
                         })
                       : "-"}
                   </td>
-                  <td className="border px-4 py-2">
-                    {note.contract.contract_number}
-                  </td>
+                  <td className="border px-4 py-2">{note.contract.contract_number}</td>
                   <td className="border px-4 py-2">{note.company.name}</td>
                   <td className="border px-4 py-2">
                     {new Date(note.created_at).toLocaleDateString("uz-UZ", {
@@ -273,13 +278,11 @@ const Candidates = () => {
                       day: "2-digit",
                     })}
                   </td>
+                  <td className="border px-4 py-2">{note.agent_name}</td>
                 </tr>
               ) : (
-                // Bo'sh qatorlar
                 <tr key={`empty-${index}`}>
-                  <td className="border px-4 py-2" colSpan={7}>
-                    &nbsp;
-                  </td>
+                  <td className="border px-4 py-2 h-10" colSpan={7}>&nbsp;</td>
                 </tr>
               );
             })}
@@ -309,9 +312,7 @@ const Candidates = () => {
             </Button>
           ))}
           <Button
-            onClick={() =>
-              setCurrentPage((prev) => Math.min(prev + 1, totalPages))
-            }
+            onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
             className="px-3 py-1 border rounded hover:bg-gray-100"
             disabled={currentPage === totalPages}
           >
@@ -320,11 +321,9 @@ const Candidates = () => {
         </div>
       )}
 
-      {/* Agar jami ma'lumotlar 10 dan ko'p bo'lsa, pagination haqida xabar */}
       {filteredNotes.length > itemsPerPage && (
         <div className="mt-4 text-center text-gray-600">
-          Jami {filteredNotes.length} ta yozuv mavjud. Har sahifada{" "}
-          {itemsPerPage} ta korsatilmoqda.
+          Jami {filteredNotes.length} ta yozuv mavjud. Har sahifada {itemsPerPage} ta ko'rsatilmoqda.
         </div>
       )}
     </div>

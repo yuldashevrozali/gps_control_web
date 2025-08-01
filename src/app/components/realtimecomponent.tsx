@@ -1,3 +1,6 @@
+// src/components/realtimecomponent.tsx
+"use client";
+
 import { useEffect, useState, useRef } from "react";
 import axios, { AxiosError } from "axios";
 import L from "leaflet";
@@ -10,13 +13,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { MapPin, Users, Activity } from "lucide-react";
+import { MapPin, Users, Activity, Locate } from "lucide-react";
 import toast from "react-hot-toast";
 
+// Leaflet CSS
+import "leaflet/dist/leaflet.css";
 
-// Fix for default markers in Leaflet
+// Marker fix
 delete (L.Icon.Default.prototype as { _getIconUrl?: unknown })._getIconUrl;
-
 L.Icon.Default.mergeOptions({
   iconRetinaUrl:
     "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
@@ -29,93 +33,116 @@ L.Icon.Default.mergeOptions({
 interface Agent {
   id: string;
   name: string;
-  first_name:string;
+  first_name: string;
   current_location?: {
-    latitude: number;
-    longitude: number;
+    latitude: number | string;
+    longitude: number | string;
   };
 }
 
-// Demo agents for testing when API is not available
-
-export default function Index() {
+export default function RealTimeComponent() {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [selectedAgent, setSelectedAgent] = useState<string>("");
-  const [selectedAgentData, setSelectedAgentData] = useState<Agent | null>(
-    null
-  );
-    const [theme, setTheme] = useState("dark")
-  
-
-
+  const [selectedAgentData, setSelectedAgentData] = useState<Agent | null>(null);
+  const [theme, setTheme] = useState<"dark" | "light">("dark");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>("");
   const [isTracking, setIsTracking] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
   const [demoMode, setDemoMode] = useState(false);
+  const [followMode, setFollowMode] = useState(true); // Yangi: Follow Mode
 
   const mapRef = useRef<L.Map | null>(null);
-  const markerRef = useRef<L.Marker | null>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const trackingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const markerRefs = useRef<Record<string, L.Marker>>({});
+  const pathRef = useRef<L.Polyline | null>(null);
+  const locationHistoryRef = useRef<Record<string, string[]>>({});
+  const warnedAgentsRef = useRef<Set<string>>(new Set());
+  const initialViewSet = useRef(false); // Boshlang'ich ko'rinish faqat bir marta
 
-
+  // Theme ni kuzatish
   useEffect(() => {
-    const checkThemeChange = () => {
-      const updatedTheme = localStorage.getItem("hrms-theme");
-      setTheme(updatedTheme === "dark" ? "dark" : "light");
+    const checkTheme = () => {
+      const saved = localStorage.getItem("hrms-theme");
+      setTheme(saved === "dark" ? "dark" : "light");
     };
-  
-    checkThemeChange(); // ilk yuklanganda
-    const interval = setInterval(checkThemeChange, 10); // har 1 sekundda tekshiradi
-  
+    checkTheme();
+    const interval = setInterval(checkTheme, 100);
     return () => clearInterval(interval);
   }, []);
-  // Initialize map
+
+  // Xaritani yaratish
   useEffect(() => {
-  if (mapContainerRef.current && !mapRef.current) {
-    mapRef.current = L.map(mapContainerRef.current).setView(
-      [41.2995, 69.2401],
-      12
-    ); // Default to Tashkent
+    if (!mapContainerRef.current || mapRef.current) return;
 
-    const tileUrl =
-      theme === "dark"
-        ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-        : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
+    const initMap = () => {
+      if (!mapContainerRef.current) return;
 
-    const attribution =
-      theme === "dark"
-        ? '&copy; <a href="https://carto.com/">CartoDB</a>'
-        : '&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a>';
+      mapRef.current = L.map(mapContainerRef.current!, {
+        zoomControl: true,
+        attributionControl: true,
+      }).setView([41.2995, 69.2401], 12);
 
-    L.tileLayer(tileUrl, {
-      attribution,
-    }).addTo(mapRef.current);
+      const tileUrl =
+        theme === "dark"
+          ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+          : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
+      const attribution =
+        theme === "dark"
+          ? '&copy; <a href="https://carto.com/">CartoDB</a>'
+          : '&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a>';
 
-    setTimeout(() => {
-      if (mapRef.current) {
-        mapRef.current.invalidateSize();
-      }
-    }, 300);
-  }
+      L.tileLayer(tileUrl, { attribution }).addTo(mapRef.current!);
 
-  // cleanup
-  return () => {
-    if (mapRef.current) {
-      mapRef.current.remove();
-      mapRef.current = null;
+      setTimeout(() => {
+        if (mapRef.current) {
+          mapRef.current.invalidateSize(true);
+        }
+      }, 100);
+    };
+
+    if (mapContainerRef.current.offsetWidth === 0) {
+      const timer = setTimeout(initMap, 300);
+      return () => clearTimeout(timer);
+    } else {
+      initMap();
     }
-  };
-}, [theme]); // theme o‘zgarsa ham map qaytadan chiziladi
 
+    return () => {
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
+    };
+  }, [theme]);
 
-  // Fetch agents
+  // Xarita o'lchamini yangilash
+  useEffect(() => {
+    if (!mapRef.current) return;
+    const handleResize = () => {
+      requestAnimationFrame(() => {
+        if (mapRef.current) {
+          mapRef.current.invalidateSize();
+        }
+      });
+    };
+    window.addEventListener("load", handleResize);
+    window.addEventListener("resize", handleResize);
+    return () => {
+      window.removeEventListener("load", handleResize);
+      window.removeEventListener("resize", handleResize);
+    };
+  }, []);
+
+  // Agentlarni olish
   const fetchAgents = async () => {
-    const token =
-      typeof window !== "undefined"
-        ? localStorage.getItem("access_token")
-        : null;
+    const token = localStorage.getItem("access_token");
+    if (!token) {
+      setError("Login required: Access token not found.");
+      setLoading(false);
+      return;
+    }
 
     try {
       setLoading(true);
@@ -125,446 +152,345 @@ export default function Index() {
           timeout: 10000,
           headers: {
             Accept: "application/json",
-            ...(token && { Authorization: `Bearer ${token}` }),
+            Authorization: `Bearer ${token}`,
           },
         }
       );
-      const agentList = response.data.results;
 
-      // Filter agents with valid current_location
-      const validAgents = agentList.filter(
-        (agent: Agent) =>
-          agent.current_location &&
-          agent.current_location.latitude &&
-          agent.current_location.longitude
-      );
+      const validAgents = response.data.results.filter((agent: Agent) => {
+        const lat = parseFloat(agent.current_location?.latitude as any);
+        const lng = parseFloat(agent.current_location?.longitude as any);
+        return !isNaN(lat) && !isNaN(lng);
+      });
 
-      setAgents(validAgents);
+      const agentsWithNumbers = validAgents.map((agent: Agent) => ({
+        ...agent,
+        current_location: {
+          latitude: parseFloat(agent.current_location!.latitude as any),
+          longitude: parseFloat(agent.current_location!.longitude as any),
+        },
+      }));
+
+      setAgents(agentsWithNumbers);
       setError("");
       setDemoMode(false);
     } catch (err: unknown) {
-  const axiosError = err as AxiosError;
-
-  if (axiosError.code === "ECONNABORTED") {
-    setError("Request timeout. Please check your connection and try again.");
-  } else if (axiosError.response?.status === 404) {
-    setError("API endpoint not found. Please verify the URL.");
-  } else if (axiosError.response?.status && axiosError.response.status >= 500) {
-    setError("Server error. Please try again later.");
-  } else {
-    setError(
-      "Failed to fetch agents. This might be a CORS issue or the API is unavailable."
-    );
-  }
-
-  console.error("Error fetching agents:", axiosError);
-} finally {
-  setLoading(false);
-}
+      const axiosError = err as AxiosError;
+      if (axiosError.code === "ECONNABORTED") {
+        setError("Request timeout. Please check your connection.");
+      } else if (axiosError.response?.status === 401) {
+        setError("Authentication failed. Please login again.");
+      } else if (axiosError.response?.status === 404) {
+        setError("API endpoint not found.");
+      } else if (axiosError.response?.status && axiosError.response.status >= 500) {
+        setError("Server error. Please try again later.");
+      } else {
+        setError("Failed to fetch agents. Check API or network.");
+      }
+      console.error("Error fetching agents:", axiosError);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // Load demo agents
   const loadDemoAgents = () => {
+    const demoAgents: Agent[] = [
+      {
+        id: "demo-1",
+        name: "Demo Agent 1",
+        first_name: "Demo 1",
+        current_location: { latitude: 41.3112, longitude: 69.2797 },
+      },
+      {
+        id: "demo-2",
+        name: "Demo Agent 2",
+        first_name: "Demo 2",
+        current_location: { latitude: 41.2995, longitude: 69.2401 },
+      },
+    ];
+    setAgents(demoAgents);
     setError("");
     setDemoMode(true);
     setLoading(false);
+    toast("Demo mode ishga tushirildi", { icon: "🌍" });
   };
 
-  // Update agent location on map
-  const locationHistoryRef = useRef<Record<string, string[]>>({});
-const warnedAgentsRef = useRef<Set<string>>(new Set());
+  // Yo'lni chizish
+  const drawPath = (coords: [number, number][]) => {
+    if (!mapRef.current || coords.length === 0) return;
+    if (pathRef.current) {
+      mapRef.current.removeLayer(pathRef.current);
+    }
+    pathRef.current = L.polyline(coords, {
+      color: "blue",
+      weight: 4,
+      opacity: 0.7,
+    }).addTo(mapRef.current);
+  };
 
-const updateAgentOnMap = (agent: Agent) => {
-  const { current_location } = agent;
-  if (!current_location || !current_location.latitude || !current_location.longitude) return;
+  // Agentni yangilash (markazga olib kelinmaydi, faqat followMode=true bo'lsa)
+  const updateAgentOnMap = (agent: Agent) => {
+    const loc = agent.current_location;
+    if (!loc) return;
+    const lat = parseFloat(loc.latitude as any);
+    const lng = parseFloat(loc.longitude as any);
+    if (isNaN(lat) || isNaN(lng) || !mapRef.current) return;
 
-  const lat = typeof current_location.latitude === "string"
-    ? parseFloat(current_location.latitude)
-    : current_location.latitude;
+    const point: [number, number] = [lat, lng];
 
-  const lng = typeof current_location.longitude === "string"
-    ? parseFloat(current_location.longitude)
-    : current_location.longitude;
+    // Path
+    const storedPaths = localStorage.getItem("agentPaths");
+    const parsedPaths: Record<string, [number, number][]> = storedPaths ? JSON.parse(storedPaths) : {};
+    const newPath = [...(parsedPaths[agent.id] || []), point];
+    parsedPaths[agent.id] = newPath;
+    localStorage.setItem("agentPaths", JSON.stringify(parsedPaths));
+    drawPath(newPath);
 
-  if (!mapRef.current) return;
+    // Marker
+    if (!markerRefs.current[agent.id]) {
+      markerRefs.current[agent.id] = L.marker(point).addTo(mapRef.current);
+    } else {
+      markerRefs.current[agent.id].setLatLng(point);
+    }
 
-  // 🔵 LocalStorage'dan avvalgi pathni olish
-  const storedPaths = localStorage.getItem("agentPaths");
-  const parsedPaths: Record<string, [number, number][]> = storedPaths
-    ? JSON.parse(storedPaths)
-    : {};
+    // Faqat Follow Mode yoqilgan bo'lsa, xaritani markazga olib keling
+    if (followMode) {
+      mapRef.current.setView(point, 15);
+    }
 
-  // 🔵 Agent uchun yangilangan path
-  const newPoint: [number, number] = [lat, lng];
-  const updatedAgentPath = [...(parsedPaths[agent.id] || []), newPoint];
-  parsedPaths[agent.id] = updatedAgentPath;
+    // Harakatsizlikni tekshirish
+    const coordStr = `${lat.toFixed(6)},${lng.toFixed(6)}`;
+    const history = locationHistoryRef.current[agent.id] || [];
+    history.push(coordStr);
+    if (history.length > 1200) history.shift();
+    locationHistoryRef.current[agent.id] = history;
 
-  // 🔵 LocalStorage'ga saqlash
-  localStorage.setItem("agentPaths", JSON.stringify(parsedPaths));
+    const allSame = history.length === 1200 && history.every((c) => c === history[0]);
+    if (allSame && !warnedAgentsRef.current.has(agent.id)) {
+      toast("Agent 10 soniyadan beri bir joyda turibdi", {
+        icon: "⚠️",
+        style: { background: "#fff7e6", border: "1px solid #ffc107", color: "#333" },
+      });
+      warnedAgentsRef.current.add(agent.id);
+    } else if (!allSame && warnedAgentsRef.current.has(agent.id)) {
+      warnedAgentsRef.current.delete(agent.id);
+    }
+  };
 
-  // 🔵 Path chizish
-  drawPath(updatedAgentPath);
-
-  // 🔵 Marker joylashuvi
-  if (!markerRefs.current[agent.id]) {
-    const newMarker = L.marker([lat, lng]).addTo(mapRef.current);
-    markerRefs.current[agent.id] = newMarker;
-  } else {
-    markerRefs.current[agent.id].setLatLng([lat, lng]);
-  }
-
-  // 🔵 Xarita markazga olib kelinadi
-  mapRef.current.setView([lat, lng], 15);
-
-  // 🧠 Location history'ni tekshirish
-  const coordStr = `${lat.toFixed(6)},${lng.toFixed(6)}`;
-  const history = locationHistoryRef.current[agent.id] || [];
-  history.push(coordStr);
-  if (history.length > 1200) history.shift(); // faqat oxirgi 5 ta
-
-  locationHistoryRef.current[agent.id] = history;
-
-  const allSame = history.length === 1200 && history.every((loc) => loc === history[0]);
-
-  if (allSame && !warnedAgentsRef.current.has(agent.id)) {
-    toast("Agent 10 soniyadan beri bir joyda turibdi", {
-  icon: "⚠️",
-  style: {
-    background: "#fff7e6",
-    border: "1px solid #ffc107",
-    color: "#333",
-  },
-});
-
-    warnedAgentsRef.current.add(agent.id);
-  }
-
-  if (!allSame && warnedAgentsRef.current.has(agent.id)) {
-    warnedAgentsRef.current.delete(agent.id);
-  }
-
-  // 🔵 Console log (ixtiyoriy)
-};
-
-
-
-const pathRef = useRef<L.Polyline | null>(null);
-
-const drawPath = (coords: [number, number][]) => {
-  if (!mapRef.current) return;
-
-  // Eski chiziqni o‘chirish
-  if (pathRef.current) {
-    mapRef.current.removeLayer(pathRef.current);
-  }
-
-  // Yangi yo‘lni chizish
-  pathRef.current = L.polyline(coords, {
-    color: "blue",
-    weight: 4,
-    opacity: 0.7,
-  }).addTo(mapRef.current);
-};
-
-
-  // Track selected agent
+  // Tracking boshlash
   const startTracking = async () => {
     const agent = agents.find((a) => a.id === selectedAgent);
     if (!agent) return;
 
     setSelectedAgentData(agent);
     setIsTracking(true);
-    updateAgentOnMap(agent);
+    setFollowMode(true); // Boshida follow mode yoqilgan
+    initialViewSet.current = false; // Reset
 
-    // Start polling for updates every 3 seconds
+    updateAgentOnMap(agent);
+    setLastUpdate(new Date());
+
     trackingIntervalRef.current = setInterval(async () => {
       try {
+        let updatedAgent: Agent | undefined;
         if (demoMode) {
-          // Simulate movement for demo mode
-          const currentAgent = { ...agent };
-          if (currentAgent.current_location) {
-            // Add small random movement
-            currentAgent.current_location.latitude +=
-              (Math.random() - 0.5) * 0.001;
-            currentAgent.current_location.longitude +=
-              (Math.random() - 0.5) * 0.001;
-            setSelectedAgentData(currentAgent);
-            updateAgentOnMap(currentAgent);
-            setLastUpdate(new Date());
+          const fakeAgent = { ...agent };
+          if (fakeAgent.current_location) {
+            fakeAgent.current_location.latitude += (Math.random() - 0.5) * 0.001;
+            fakeAgent.current_location.longitude += (Math.random() - 0.5) * 0.001;
+            updatedAgent = fakeAgent;
           }
         } else {
-          const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
-          const response = await axios.get(
-            "https://gps.mxsoft.uz/account/agent-list/",
-            {
-              timeout: 10000,
-              headers: {
-                Accept: "application/json",
-                ...(token && { Authorization: `Bearer ${token}` }),
-              },
-            }
-          );
-          const updatedAgents = response.data.results || [];
-          const updatedAgent = updatedAgents.find(
-            (a: Agent) => a.id === selectedAgent
-          );
+          const token = localStorage.getItem("access_token");
+          const res = await axios.get("https://gps.mxsoft.uz/account/agent-list/", {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          updatedAgent = res.data.results.find((a: Agent) => a.id === selectedAgent);
+        }
 
-          if (updatedAgent && updatedAgent.current_location) {
-            setSelectedAgentData(updatedAgent);
-            updateAgentOnMap(updatedAgent);
-            setLastUpdate(new Date());
-          }
+        if (updatedAgent && updatedAgent.current_location) {
+          setSelectedAgentData(updatedAgent);
+          updateAgentOnMap(updatedAgent);
+          setLastUpdate(new Date());
         }
       } catch (err) {
-        console.error("Error updating agent location:", err);
+        console.error("Tracking error:", err);
       }
     }, 3000);
   };
 
-  // Stop tracking
+  // Tracking to'xtatish
   const stopTracking = () => {
-  setIsTracking(false);
-  setSelectedAgentData(null);
+    setIsTracking(false);
+    setSelectedAgentData(null);
+    setFollowMode(false);
+    if (trackingIntervalRef.current) {
+      clearInterval(trackingIntervalRef.current);
+      trackingIntervalRef.current = null;
+    }
+    Object.values(markerRefs.current).forEach((marker) => {
+      if (mapRef.current) mapRef.current.removeLayer(marker);
+    });
+    markerRefs.current = {};
+    if (pathRef.current && mapRef.current) {
+      mapRef.current.removeLayer(pathRef.current);
+      pathRef.current = null;
+    }
+    localStorage.removeItem("agentPaths");
+  };
 
-  if (trackingIntervalRef.current) {
-    clearInterval(trackingIntervalRef.current);
-    trackingIntervalRef.current = null;
-  }
-
-  if (markerRef.current && mapRef.current) {
-    mapRef.current.removeLayer(markerRef.current);
-    markerRef.current = null;
-  }
-
-  // 👉 localStorage dan path'ni o'chiramiz
-  localStorage.removeItem("agentPaths");
-};
-
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (trackingIntervalRef.current) {
-        clearInterval(trackingIntervalRef.current);
+  // Follow Mode o'zgartirish
+  const toggleFollowMode = () => {
+    if (!isTracking) return;
+    const newMode = !followMode;
+    setFollowMode(newMode);
+    if (newMode && selectedAgentData) {
+      const loc = selectedAgentData.current_location;
+      if (loc) {
+        mapRef.current?.setView([loc.latitude as number, loc.longitude as number], 15);
       }
-    };
-  }, []);
-  const markerRefs = useRef<Record<string, L.Marker>>({});
+    }
+    toast.success(`Follow Mode: ${newMode ? "Yoqildi" : "O'chdi"}`);
+  };
 
-
+  // Agent tanlanganda pathni yuklash
   useEffect(() => {
-  if (!selectedAgent) return;
+    if (!selectedAgent) return;
+    const stored = localStorage.getItem("agentPaths");
+    if (stored) {
+      const paths: Record<string, [number, number][]> = JSON.parse(stored);
+      drawPath(paths[selectedAgent] || []);
+    }
+  }, [selectedAgent]);
 
-  const storedPaths = localStorage.getItem("agentPaths");
-  if (storedPaths) {
-    const parsedPaths: Record<string, [number, number][]> = JSON.parse(storedPaths);
-    const agentPath = parsedPaths[selectedAgent] || [];
-    drawPath(agentPath);
-  } else {
-  }
-}, [selectedAgent]);
-
-
-
-
-  // Initial fetch
+  // Boshlang'ich yuklash
   useEffect(() => {
     fetchAgents();
   }, []);
 
+  // Cleanup
+  useEffect(() => {
+    return () => {
+      if (trackingIntervalRef.current) clearInterval(trackingIntervalRef.current);
+    };
+  }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 shadow-sm">
-        <div
-  className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 ${
-    theme === "dark" ? "bg-gray-800 text-white" : "bg-gray-100 text-black"
-  }`}
->
-
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="p-2 bg-blue-500 rounded-lg">
-                <MapPin className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <h1 className={`text-2xl font-bold text-gray-900${
-    theme === "dark" ? "text-white" : "text-black"
-  }`}>
-                  GPS Tracker
-                </h1>
-                <p className="text-sm text-gray-500">
-                  Real-time agent location monitoring
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2 text-sm text-gray-600">
-                <Users className="h-4 w-4" />
-                <span className={`${
-    theme === "dark" ? "text-white" : "text-black"
-  }`}>{agents.length} agents available</span>
-              </div>
-              {isTracking && (
-                <div className="flex items-center space-x-2 text-sm text-green-600">
-                  <Activity className="h-4 w-4" />
-                  <span>Live tracking</span>
-                </div>
-              )}
-              {demoMode && (
-                <div className="flex items-center space-x-2 text-sm text-orange-600">
-                  <Activity className="h-4 w-4" />
-                  <span>Demo Mode</span>
-                </div>
-              )}
+    <div className="space-y-6">
+      <div className="bg-white p-4 rounded-lg shadow">
+        <h3 className="text-lg font-semibold mb-3">Agentni tanlang</h3>
+        {loading ? (
+          <div className="flex items-center justify-center py-4">
+            <div className="animate-spin h-6 w-6 border-b-2 border-blue-500 rounded-full"></div>
+          </div>
+        ) : error ? (
+          <div>
+            <p className="text-red-500 text-sm mb-4">{error}</p>
+            <div className="space-y-2">
+              <Button onClick={fetchAgents} variant="outline" className="w-full">
+                Qayta urinish
+              </Button>
+              <Button onClick={loadDemoAgents} variant="secondary" className="w-full">
+                Demo Mode
+              </Button>
             </div>
           </div>
-        </div>
+        ) : agents.length === 0 ? (
+          <div>
+            <p className="text-gray-500 text-sm mb-4">Hech qanday agent topilmadi</p>
+            <Button onClick={loadDemoAgents} variant="secondary" className="w-full">
+              Demo Mode
+            </Button>
+          </div>
+        ) : (
+          <>
+            <Select value={selectedAgent} onValueChange={setSelectedAgent} disabled={isTracking}>
+              <SelectTrigger>
+                <SelectValue placeholder="Agent tanlang" />
+              </SelectTrigger>
+              <SelectContent>
+                {agents.map((agent) => (
+                  <SelectItem key={agent.id} value={agent.id}>
+                    {agent.first_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <div className="flex gap-2 mt-3">
+              {!isTracking ? (
+                <Button
+                  onClick={startTracking}
+                  disabled={!selectedAgent}
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  Boshlash
+                </Button>
+              ) : (
+                <>
+                  <Button
+                    onClick={stopTracking}
+                    variant="destructive"
+                    className="flex-1"
+                  >
+                    To'xtatish
+                  </Button>
+                  <Button
+                    onClick={toggleFollowMode}
+                    variant={followMode ? "default" : "outline"}
+                    size="icon"
+                    title="Follow Mode"
+                  >
+                    <Locate className="h-4 w-4" />
+                  </Button>
+                </>
+              )}
+              <Button onClick={fetchAgents} variant="outline" size="icon">
+                <Activity className="h-4 w-4" />
+              </Button>
+            </div>
+          </>
+        )}
       </div>
 
-      <div
-  className={`max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 ${
-    theme === "dark" ? "bg-gray-800 text-white" : "bg-gray-100 text-black"
-  }`}
->
-
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Control Panel */}
-          <div className="lg:col-span-1 space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg font-semibold">
-                  Agentlar
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {loading ? (
-                  <div className="flex items-center justify-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-                  </div>
-                ) : error ? (
-                  <div>
-                    <p className="text-red-500 text-sm mb-4">{error}</p>
-                    <div className="space-y-2">
-                      <Button
-                        onClick={fetchAgents}
-                        variant="outline"
-                        className="w-full"
-                      >
-                        Retry
-                      </Button>
-                      <Button
-                        onClick={loadDemoAgents}
-                        variant="secondary"
-                        className="w-full"
-                      >
-                        Try Demo Mode
-                      </Button>
-                    </div>
-                  </div>
+      {selectedAgentData && (
+        <Card className="bg-white">
+          <CardHeader>
+            <CardTitle>Agent Ma'lumotlari</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2 text-sm">
+              <p><strong>Ism:</strong> {selectedAgentData.name}</p>
+              <p>
+                <strong>Koordinatalar:</strong>{" "}
+                {selectedAgentData.current_location ? (
+                  (() => {
+                    const lat = parseFloat(selectedAgentData.current_location!.latitude as any);
+                    const lng = parseFloat(selectedAgentData.current_location!.longitude as any);
+                    return isNaN(lat) || isNaN(lng)
+                      ? "Noto'g'ri koordinatalar"
+                      : `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+                  })()
                 ) : (
-                  <>
-                    <Select
-                      value={selectedAgent}
-                      onValueChange={setSelectedAgent}
-                      disabled={isTracking}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="agent tanlang" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {agents.map((agent) => (
-                          <SelectItem key={agent.id} value={agent.id}>
-                            {agent.first_name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-
-                    <div className="flex gap-2">
-                      {!isTracking ? (
-                        <Button
-                          onClick={startTracking}
-                          disabled={!selectedAgent}
-                          className="flex-1"
-                        >
-                          Boshlash
-                        </Button>
-                      ) : (
-                        <Button
-                          onClick={stopTracking}
-                          variant="destructive"
-                          className="flex-1"
-                        >
-                          Toxtatish
-                        </Button>
-                      )}
-                      <Button
-                        onClick={fetchAgents}
-                        variant="outline"
-                        size="icon"
-                      >
-                        <Activity className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </>
+                  "Mavjud emas"
                 )}
-              </CardContent>
-            </Card>
-
-            {/* Agent Info */}
-            {selectedAgentData && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg font-semibold">
-                    Agent Details
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <div>
-                      <p className="text-sm font-medium text-gray-700">Name</p>
-                      <p className="text-sm text-gray-900">
-                        {selectedAgentData.name}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-700">
-                        Coordinates
-                      </p>
-                      <p className="text-xs text-gray-600 font-mono">
-                        {selectedAgentData.current_location
-                          ? `${Number(selectedAgentData.current_location.latitude).toFixed(6)}, ${Number(selectedAgentData.current_location.longitude).toFixed(6)}`
-                          : "No coordinates"}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-700">
-                        Last Update
-                      </p>
-                      <p className="text-xs text-gray-600">
-                        {lastUpdate.toLocaleString()}
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-
-          {/* Map */}
-          <div className="lg:col-span-3">
-            <div style={{ height: "70vh", minHeight: 400, maxHeight: "80vh" }} className="w-full rounded-lg overflow-hidden">
-              <div
-                id="map_error"
-                ref={mapContainerRef}
-                style={{ height: "100%", width: "100%" }}
-                className="leaflet-map-container"
-              />
+              </p>
+              <p><strong>Yangilangan:</strong> {lastUpdate.toLocaleString()}</p>
+              <p><strong>Follow Mode:</strong> {followMode ? "Yoqilgan" : "O'chgan"}</p>
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <div
+        style={{ height: "70vh", minHeight: "400px", maxHeight: "80vh" }}
+        className="w-full rounded-lg overflow-hidden border"
+      >
+        <div
+          ref={mapContainerRef}
+          style={{ height: "100%", width: "100%", minHeight: "400px" }}
+          className="leaflet-map-container"
+        />
       </div>
     </div>
   );

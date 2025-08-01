@@ -1,5 +1,4 @@
 "use client";
-
 import { useEffect, useMemo, useState } from "react";
 import {
   Table,
@@ -18,7 +17,11 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"; // Select komponentlarini import qildik
+} from "@/components/ui/select";
+
+// Excel yaratish uchun kutubxonalar
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
 
 function getCookie(name: string): string | null {
   const value = `; ${document.cookie}`;
@@ -50,8 +53,7 @@ const Payroll = () => {
   const [page, setPage] = useState(1);
   const [firstNameSearch, setFirstNameSearch] = useState("");
   const [dateSearch, setDateSearch] = useState("");
-  // 'all' qiymati agent filtri bo'lmaganda ishlatiladi
-  const [agentSearch, setAgentSearch] = useState("all");
+  const [agentSearch, setAgentSearch] = useState("all"); // 'all' hamma agentlar uchun
   const router = useRouter();
   const [theme, setTheme] = useState("light");
 
@@ -60,17 +62,15 @@ const Payroll = () => {
     if (isLoggedIn !== "true") {
       router.push("/login");
     }
-  }, []);
+  }, [router]);
 
   useEffect(() => {
     const checkThemeChange = () => {
       const updatedTheme = localStorage.getItem("hrms-theme");
       setTheme(updatedTheme === "dark" ? "dark" : "light");
     };
-
-    checkThemeChange(); // Dastlabki yuklanishda tekshiradi
-    const interval = setInterval(checkThemeChange, 10); // Har 10msda tekshiradi
-
+    checkThemeChange();
+    const interval = setInterval(checkThemeChange, 10);
     return () => clearInterval(interval);
   }, []);
 
@@ -93,7 +93,7 @@ const Payroll = () => {
       .finally(() => setLoading(false));
   }, []);
 
-  // Ma'lumotlardagi noyob agent nomlarini olamiz
+  // Faqat noyob agentlar
   const uniqueAgents = useMemo(() => {
     const agents = new Set<string>();
     data.forEach((item) => {
@@ -104,21 +104,17 @@ const Payroll = () => {
     return Array.from(agents).sort();
   }, [data]);
 
-  // Filtrlangaan ma'lumotlar
+  // Filtrlangan ma'lumotlar
   const filteredData = useMemo(() => {
     return data.filter((item) => {
       const matchName = item.client_first_name
         .toLowerCase()
         .includes(firstNameSearch.toLowerCase());
-
       const matchDate = dateSearch
         ? new Date(item.paid_at).toISOString().slice(0, 10) === dateSearch
         : true;
-
-      // Agent filtrlash shartini yangiladik
       const matchAgent =
         agentSearch === "all" ? true : item.processed_by_name === agentSearch;
-
       return matchName && matchDate && matchAgent;
     });
   }, [data, firstNameSearch, dateSearch, agentSearch]);
@@ -129,18 +125,51 @@ const Payroll = () => {
     page * ITEMS_PER_PAGE
   );
 
-  return (
-    <div className="p-6">
-      <h2 className="text-2xl font-bold mb-4">🧾 Tolovlar Jadvali</h2>
+  // Excelga eksport qilish funksiyasi
+  const handleExportToExcel = () => {
+    const exportData = filteredData.map((item) => ({
+      "Xaridor": `${item.client_first_name} ${item.client_last_name}`,
+      "Contract raqami": item.contract_number,
+      "Summa (UZS)": Number(item.amount).toLocaleString("en-US").replace(/,/g, " "),
+      "To'lov sanasi": new Date(item.paid_at).toLocaleString("uz-UZ", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+      "To'lov turi": item.method === "CLICK" ? "Click" : item.method === "CASH" ? "Naqd" : item.method === "CARD" ? "Karta" : item.method,
+      "Holati": item.is_successful ? "Muvaffaqiyatli" : "Bekor qilingan",
+      "Client ID": item.client_id,
+      "Agent": item.processed_by_name,
+    }));
 
-      {/* 🔍 Qidiruv filtrlari */}
-      <div className="flex flex-wrap gap-4 mb-4">
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "To'lovlar");
+
+    // Agar biron agent tanlangan bo'lsa, fayl nomi unga mos bo'ladi
+    const agentName = agentSearch === "all" ? "barcha" : agentSearch.replace(/\s+/g, "_");
+    const fileName = `tolovlar_${agentName}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+
+    // Faylni yaratish va yuklab olish
+    const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+    const blob = new Blob([excelBuffer], { type: "application/octet-stream" });
+    saveAs(blob, fileName);
+  };
+
+  return (
+    <div className="p-6 max-w-7xl mx-auto">
+      <h2 className="text-2xl font-bold mb-6">🧾 To'lovlar Jadvali</h2>
+
+      {/* Qidiruv va filtrlar */}
+      <div className="flex flex-wrap gap-4 mb-6">
         <Input
           placeholder="👤 Ism bo‘yicha qidirish"
           value={firstNameSearch}
           onChange={(e) => {
             setFirstNameSearch(e.target.value);
-            setPage(1); // Filtr o'zgarganda sahifani 1-ga qaytarish
+            setPage(1);
           }}
           className="w-64"
         />
@@ -149,25 +178,16 @@ const Payroll = () => {
           value={dateSearch}
           onChange={(e) => {
             setDateSearch(e.target.value);
-            setPage(1); // Filtr o'zgarganda sahifani 1-ga qaytarish
+            setPage(1);
           }}
           className="w-48"
         />
-
-        {/* Agent Select (Dropdown) */}
-        <Select
-          value={agentSearch} // Agent qidiruv qiymati bilan bog'laymiz
-          onValueChange={(value) => {
-            setAgentSearch(value);
-            setPage(1); // Filtr o'zgarganda sahifani 1-ga qaytarish
-          }}
-        >
+        <Select value={agentSearch} onValueChange={setAgentSearch}>
           <SelectTrigger className="w-64">
             <SelectValue placeholder="👤 Agent bo‘yicha qidirish" />
           </SelectTrigger>
           <SelectContent>
-            {/* "Barchasi" opsiyasi uchun qiymatni "all" qilib o'zgartirdik */}
-            <SelectItem value="all">Barchasi</SelectItem>{" "}
+            <SelectItem value="all">Barchasi</SelectItem>
             {uniqueAgents.map((agent) => (
               <SelectItem key={agent} value={agent}>
                 {agent}
@@ -175,61 +195,52 @@ const Payroll = () => {
             ))}
           </SelectContent>
         </Select>
+
+        {/* Excelga eksport qilish tugmasi */}
+        <Button
+          onClick={handleExportToExcel}
+          className="bg-green-600 hover:bg-green-700 text-white ml-auto"
+        >
+          📥 Excelga saqlash
+        </Button>
       </div>
 
+      {/* Jadval */}
       {loading ? (
-        <p>⏳ Yuklanmoqda…</p>
+        <p className="text-center text-lg text-gray-500">⏳ Yuklanmoqda…</p>
       ) : filteredData.length === 0 ? (
-        <p>🚫 Malumot topilmadi</p>
+        <p className="text-center text-lg text-red-500">🚫 Ma'lumot topilmadi</p>
       ) : (
         <>
-          <div className="overflow-x-auto border rounded-lg">
+          <div className="overflow-x-auto border rounded-lg shadow-sm">
             <Table className="w-full text-sm border-collapse border border-gray-300">
               <TableHeader>
                 <TableRow
-                  className={theme === "dark" ? "bg-gray-800" : "bg-gray-100"}
+                  className={theme === "dark" ? "bg-gray-800 text-white" : "bg-gray-100"}
                 >
-                  <TableHead className="border border-gray-300">
-                    👤 Xaridorlar
-                  </TableHead>
-                  <TableHead className="border border-gray-300">
-                    📄 Contract raqami
-                  </TableHead>
-                  <TableHead className="border border-gray-300">
-                    💰 Summa
-                  </TableHead>
-                  <TableHead className="border border-gray-300">
-                    📅 Tolov sanasi
-                  </TableHead>
-                  <TableHead className="border border-gray-300">
-                    💳 Tolov turi
-                  </TableHead>
-                  <TableHead className="border border-gray-300">
-                    ✅ Holati
-                  </TableHead>
-                  <TableHead className="border border-gray-300">
-                    🧾 Client ID
-                  </TableHead>
-                  <TableHead className="border border-gray-300">
-                    👤 Agent
-                  </TableHead>
+                  <TableHead className="border border-gray-300 px-4 py-2">👤 Xaridor</TableHead>
+                  <TableHead className="border border-gray-300 px-4 py-2">📄 Contract raqami</TableHead>
+                  <TableHead className="border border-gray-300 px-4 py-2">💰 Summa</TableHead>
+                  <TableHead className="border border-gray-300 px-4 py-2">📅 To'lov sanasi</TableHead>
+                  <TableHead className="border border-gray-300 px-4 py-2">💳 To'lov turi</TableHead>
+                  <TableHead className="border border-gray-300 px-4 py-2">✅ Holati</TableHead>
+                  <TableHead className="border border-gray-300 px-4 py-2">🧾 Client ID</TableHead>
+                  <TableHead className="border border-gray-300 px-4 py-2">👤 Agent</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {currentPageData.map((item) => (
                   <TableRow key={item.id}>
-                    <TableCell className="border border-gray-300">
+                    <TableCell className="border border-gray-300 px-4 py-2">
                       {item.client_first_name} {item.client_last_name}
                     </TableCell>
-                    <TableCell className="border border-gray-300">
+                    <TableCell className="border border-gray-300 px-4 py-2">
                       {item.contract_number}
                     </TableCell>
-                    <TableCell className="border border-gray-300">
-                      {Number(item.amount)
-                        .toLocaleString("en-US")
-                        .replace(/,/g, " ")}
+                    <TableCell className="border border-gray-300 px-4 py-2">
+                      {Number(item.amount).toLocaleString("en-US").replace(/,/g, " ")} UZS
                     </TableCell>
-                    <TableCell className="border border-gray-300">
+                    <TableCell className="border border-gray-300 px-4 py-2">
                       {new Date(item.paid_at).toLocaleString("uz-UZ", {
                         year: "numeric",
                         month: "2-digit",
@@ -238,36 +249,24 @@ const Payroll = () => {
                         minute: "2-digit",
                       })}
                     </TableCell>
-                    <TableCell className="border border-gray-300">
-                      {item.method === "CLICK"
-                        ? "Click"
-                        : item.method === "CASH"
-                        ? "Naqd"
-                        : item.method === "CARD"
-                        ? "Karta"
-                        : item.method}
+                    <TableCell className="border border-gray-300 px-4 py-2">
+                      {item.method === "CLICK" ? "Click" : item.method === "CASH" ? "Naqd" : item.method === "CARD" ? "Karta" : item.method}
                     </TableCell>
-                    <TableCell className="border border-gray-300">
-                      {item.is_successful ? "✅" : "❌"}
+                    <TableCell className="border border-gray-300 px-4 py-2">
+                      {item.is_successful ? "✅ Muvaffaqiyatli" : "❌ Bekor"}
                     </TableCell>
-                    <TableCell className="border border-gray-300">
-                      {item.client_id}
-                    </TableCell>
-                    <TableCell className="border border-gray-300">
-                      {item.processed_by_name}
-                    </TableCell>
+                    <TableCell className="border border-gray-300 px-4 py-2">{item.client_id}</TableCell>
+                    <TableCell className="border border-gray-300 px-4 py-2">{item.processed_by_name}</TableCell>
                   </TableRow>
                 ))}
 
-                {/* Jadvalni 10 qatordan to‘ldirish uchun bo‘sh qatorlar */}
-                {Array.from({
-                  length: ITEMS_PER_PAGE - currentPageData.length,
-                }).map((_, idx) => (
+                {/* Bo'sh qatorlar (sahifani to'ldirish uchun) */}
+                {Array.from({ length: ITEMS_PER_PAGE - currentPageData.length }).map((_, idx) => (
                   <TableRow key={`empty-${idx}`}>
                     {Array.from({ length: 8 }).map((_, colIdx) => (
                       <TableCell
                         key={colIdx}
-                        className="border border-gray-300 text-transparent select-none"
+                        className="border border-gray-300 h-10 text-transparent select-none"
                       >
                         -
                       </TableCell>
@@ -278,20 +277,22 @@ const Payroll = () => {
             </Table>
           </div>
 
-          {/* Sahifalashtirish (Pagination) */}
-          <div className="mt-4 flex justify-center gap-4">
+          {/* Sahifalash */}
+          <div className="mt-6 flex justify-center items-center gap-6">
             <Button
               onClick={() => setPage((p) => Math.max(p - 1, 1))}
               disabled={page === 1}
+              className="px-4 py-2"
             >
               ⬅️ Oldingi
             </Button>
-            <span className="text-lg font-semibold">
-              {page} / {totalPages}
+            <span className="text-lg font-medium">
+              {page} / {totalPages || 1}
             </span>
             <Button
-              onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
+              onClick={() => setPage((p) => Math.min(p + 1, totalPages || 1))}
               disabled={page === totalPages}
+              className="px-4 py-2"
             >
               Keyingi ➡️
             </Button>

@@ -1,17 +1,15 @@
-'use client';
+// src/app/components/MapClient.tsx
+"use client";
+import dynamic from "next/dynamic";
 
-import dynamic from 'next/dynamic';
+const MapComponent = dynamic(
+  () => import("../components/realtimecomponent"),
+  {
+    ssr: false,
+    loading: () => <p>Xarita yuklanmoqda...</p>,
+  }
+);
 
-const RealTimeMap = dynamic(() => import('../components/realtimecomponent'), {
-  ssr: false,
-});
-
-export default function RealTimeMapPage() {
-  return (
-    <div>
-      <RealTimeMap />
-    </div>
-  );
+export default function MapClient() {
+  return <MapComponent />;
 }
-
-
