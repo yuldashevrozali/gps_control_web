@@ -45,7 +45,7 @@ export const Navbar = () => {
 };
   const getHeaderProps = () => {
     const subtitle = getTimeBasedSubtitle();
-    if (pathname === "/dashboard") {
+    if (pathname === "/") {
       return {
         greeting: userEmail,
         subtitle,

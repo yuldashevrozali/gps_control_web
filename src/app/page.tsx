@@ -14,7 +14,7 @@ function getCookie(name: string): string | null {
 }
 
 // Dinamik import qilingan MapHistory komponenti
-const MapHistory = dynamic(() => import('../components/MapHistoryComponent'), {
+const MapHistory = dynamic(() => import('./components/MapHistoryComponent'), {
   ssr: false,
 });
 

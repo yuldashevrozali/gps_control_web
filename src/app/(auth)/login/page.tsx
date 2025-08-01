@@ -28,7 +28,7 @@ const Login = () => {
       const success = await loginUser(data.email, data.password);
       if (success) {
         toast.success("✅ Muvaffaqiyatli kirdingiz!");
-        router.push("/dashboard");
+        router.push("/");
       } else {
         toast.error("❌ Email yoki parol noto‘g‘ri!");
       }

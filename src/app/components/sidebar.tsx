@@ -44,7 +44,7 @@
         name: "Asosiy Sahifa",
         defaultIcon: "/icons/dashboard.svg",
         activeIcon: "/icons/dashboard-active.svg",
-        href: "/dashboard",
+        href: "/",
       },
       {
         name: "Jonli Xarita",
