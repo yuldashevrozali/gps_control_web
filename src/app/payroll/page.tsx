@@ -180,7 +180,7 @@ const Payroll = () => {
       {loading ? (
         <p>⏳ Yuklanmoqda…</p>
       ) : filteredData.length === 0 ? (
-        <p>🚫 Ma'lumot topilmadi</p>
+        <p>🚫 Malumot topilmadi</p>
       ) : (
         <>
           <div className="overflow-x-auto border rounded-lg">
@@ -199,10 +199,10 @@ const Payroll = () => {
                     💰 Summa
                   </TableHead>
                   <TableHead className="border border-gray-300">
-                    📅 To'lov sanasi
+                    📅 Tolov sanasi
                   </TableHead>
                   <TableHead className="border border-gray-300">
-                    💳 To'lov turi
+                    💳 Tolov turi
                   </TableHead>
                   <TableHead className="border border-gray-300">
                     ✅ Holati
