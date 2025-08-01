@@ -219,7 +219,7 @@ const Candidates = () => {
       </div>
 
       {filteredNotes.length === 0 && !axios.isCancel(null) ? ( // Ma'lumot yuklanmagan va xato bo'lmagan holat
-        <p>Ma'lumotlar yuklanmoqda yoki mavjud emas...</p>
+        <p>Malumotlar yuklanmoqda yoki mavjud emas...</p>
       ) : (
         <table className="w-full table-auto border border-gray-300">
           <thead>
