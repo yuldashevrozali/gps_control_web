@@ -28,6 +28,7 @@ interface Contract {
   contract_number: string;
   external_id: number;
   client: Client;
+  agent_name:string;
 }
 interface Company {
   id: number;
@@ -42,6 +43,7 @@ interface Note {
   contract: Contract;
   company: Company;
   processed_by_name: string; // API javobidan keladigan maydon
+  agent_name:string;
 }
 
 const Candidates = () => {
@@ -239,7 +241,7 @@ const Candidates = () => {
 
       {/* Jadval */}
       {filteredNotes.length === 0 ? (
-        <p className="text-center text-gray-500">🔍 Ma'lumot topilmadi</p>
+        <p className="text-center text-gray-500">🔍 Malumot topilmadi</p>
       ) : (
         <table className="w-full table-auto border border-gray-300">
           <thead>
@@ -323,7 +325,7 @@ const Candidates = () => {
 
       {filteredNotes.length > itemsPerPage && (
         <div className="mt-4 text-center text-gray-600">
-          Jami {filteredNotes.length} ta yozuv mavjud. Har sahifada {itemsPerPage} ta ko'rsatilmoqda.
+          Jami {filteredNotes.length} ta yozuv mavjud. Har sahifada {itemsPerPage} ta korsatilmoqda.
         </div>
       )}
     </div>

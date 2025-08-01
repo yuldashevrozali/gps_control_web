@@ -160,7 +160,7 @@ const Payroll = () => {
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
-      <h2 className="text-2xl font-bold mb-6">🧾 To'lovlar Jadvali</h2>
+      <h2 className="text-2xl font-bold mb-6">🧾 Tolovlar Jadvali</h2>
 
       {/* Qidiruv va filtrlar */}
       <div className="flex flex-wrap gap-4 mb-6">
@@ -209,7 +209,7 @@ const Payroll = () => {
       {loading ? (
         <p className="text-center text-lg text-gray-500">⏳ Yuklanmoqda…</p>
       ) : filteredData.length === 0 ? (
-        <p className="text-center text-lg text-red-500">🚫 Ma'lumot topilmadi</p>
+        <p className="text-center text-lg text-red-500">🚫 Malumot topilmadi</p>
       ) : (
         <>
           <div className="overflow-x-auto border rounded-lg shadow-sm">
@@ -221,8 +221,8 @@ const Payroll = () => {
                   <TableHead className="border border-gray-300 px-4 py-2">👤 Xaridor</TableHead>
                   <TableHead className="border border-gray-300 px-4 py-2">📄 Contract raqami</TableHead>
                   <TableHead className="border border-gray-300 px-4 py-2">💰 Summa</TableHead>
-                  <TableHead className="border border-gray-300 px-4 py-2">📅 To'lov sanasi</TableHead>
-                  <TableHead className="border border-gray-300 px-4 py-2">💳 To'lov turi</TableHead>
+                  <TableHead className="border border-gray-300 px-4 py-2">📅 Tolov sanasi</TableHead>
+                  <TableHead className="border border-gray-300 px-4 py-2">💳 Tolov turi</TableHead>
                   <TableHead className="border border-gray-300 px-4 py-2">✅ Holati</TableHead>
                   <TableHead className="border border-gray-300 px-4 py-2">🧾 Client ID</TableHead>
                   <TableHead className="border border-gray-300 px-4 py-2">👤 Agent</TableHead>

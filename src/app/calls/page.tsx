@@ -24,6 +24,8 @@ import { Button } from "@/components/ui/button";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 
+saveAs(new Blob(["content"]), "file.txt");
+
 interface Call {
   id: number;
   agent_full_name: string;
@@ -141,7 +143,7 @@ export default function Calls() {
   return (
     <Card className="p-4 mt-6">
       <CardContent>
-        <h2 className="text-xl font-semibold mb-4">📞 Qo'ng'iroq Tarixi</h2>
+        <h2 className="text-xl font-semibold mb-4">📞 Qongiroq Tarixi</h2>
 
         {/* Filtrlar */}
         <div className="flex flex-col sm:flex-row gap-4 mb-6">
@@ -182,7 +184,7 @@ export default function Calls() {
         {/* Jadval */}
         {filteredCalls.length === 0 ? (
           <p className="mt-4 text-muted-foreground text-center py-6">
-            🔍 Hech qanday ma'lumot topilmadi. Iltimos, filtrlarni o'zgartiring.
+            🔍 Hech qanday malumot topilmadi. Iltimos, filtrlarni ozgartiring.
           </p>
         ) : (
           <div className="overflow-x-auto">
@@ -191,7 +193,7 @@ export default function Calls() {
                 <TableRow>
                   <TableHead>ID</TableHead>
                   <TableHead>Telefon raqam</TableHead>
-                  <TableHead>Qo'ng'iroq turi</TableHead>
+                  <TableHead>Qongiroq turi</TableHead>
                   <TableHead>Davomiyligi (sek)</TableHead>
                   <TableHead>Sana</TableHead>
                   <TableHead>Foydalanuvchi</TableHead>

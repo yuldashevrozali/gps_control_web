@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { MapPin, Users, Activity, Locate } from "lucide-react";
+import { Activity, Locate } from "lucide-react";
 import toast from "react-hot-toast";
 
 // Leaflet CSS
@@ -158,18 +158,42 @@ export default function RealTimeComponent() {
       );
 
       const validAgents = response.data.results.filter((agent: Agent) => {
-        const lat = parseFloat(agent.current_location?.latitude as any);
-        const lng = parseFloat(agent.current_location?.longitude as any);
-        return !isNaN(lat) && !isNaN(lng);
-      });
+  const latStr = agent.current_location?.latitude;
+  const lngStr = agent.current_location?.longitude;
 
-      const agentsWithNumbers = validAgents.map((agent: Agent) => ({
-        ...agent,
-        current_location: {
-          latitude: parseFloat(agent.current_location!.latitude as any),
-          longitude: parseFloat(agent.current_location!.longitude as any),
-        },
-      }));
+  // Faqat string yoki number bo'lsa parseFloat qilish
+  const lat = typeof latStr === "string" || typeof latStr === "number"
+    ? parseFloat(latStr.toString())
+    : NaN;
+
+  const lng = typeof lngStr === "string" || typeof lngStr === "number"
+    ? parseFloat(lngStr.toString())
+    : NaN;
+
+  return !isNaN(lat) && !isNaN(lng);
+});
+
+      const agentsWithNumbers = validAgents.map((agent: Agent) => {
+  const latStr = agent.current_location?.latitude;
+  const lngStr = agent.current_location?.longitude;
+
+  // String yoki number bo'lsa, parseFloat qilish
+  const latitude = typeof latStr === "string" || typeof latStr === "number"
+    ? parseFloat(latStr.toString())
+    : NaN;
+
+  const longitude = typeof lngStr === "string" || typeof lngStr === "number"
+    ? parseFloat(lngStr.toString())
+    : NaN;
+
+  return {
+    ...agent,
+    current_location: {
+      latitude,
+      longitude,
+    },
+  };
+});
 
       setAgents(agentsWithNumbers);
       setError("");
@@ -232,8 +256,8 @@ export default function RealTimeComponent() {
   const updateAgentOnMap = (agent: Agent) => {
     const loc = agent.current_location;
     if (!loc) return;
-    const lat = parseFloat(loc.latitude as any);
-    const lng = parseFloat(loc.longitude as any);
+    const lat = parseFloat(loc.latitude as string );
+    const lng = parseFloat(loc.longitude as string);
     if (isNaN(lat) || isNaN(lng) || !mapRef.current) return;
 
     const point: [number, number] = [lat, lng];
@@ -278,46 +302,63 @@ export default function RealTimeComponent() {
   };
 
   // Tracking boshlash
-  const startTracking = async () => {
-    const agent = agents.find((a) => a.id === selectedAgent);
-    if (!agent) return;
+ const startTracking = async () => {
+  const agent = agents.find((a) => a.id === selectedAgent);
+  if (!agent) return;
 
-    setSelectedAgentData(agent);
-    setIsTracking(true);
-    setFollowMode(true); // Boshida follow mode yoqilgan
-    initialViewSet.current = false; // Reset
+  setSelectedAgentData(agent);
+  setIsTracking(true);
+  setFollowMode(true);
+  initialViewSet.current = false;
+  updateAgentOnMap(agent);
+  setLastUpdate(new Date());
 
-    updateAgentOnMap(agent);
-    setLastUpdate(new Date());
+  trackingIntervalRef.current = setInterval(async () => {
+    try {
+      let updatedAgent: Agent | undefined;
 
-    trackingIntervalRef.current = setInterval(async () => {
-      try {
-        let updatedAgent: Agent | undefined;
-        if (demoMode) {
-          const fakeAgent = { ...agent };
-          if (fakeAgent.current_location) {
-            fakeAgent.current_location.latitude += (Math.random() - 0.5) * 0.001;
-            fakeAgent.current_location.longitude += (Math.random() - 0.5) * 0.001;
-            updatedAgent = fakeAgent;
-          }
-        } else {
-          const token = localStorage.getItem("access_token");
-          const res = await axios.get("https://gps.mxsoft.uz/account/agent-list/", {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          updatedAgent = res.data.results.find((a: Agent) => a.id === selectedAgent);
+      if (demoMode) {
+        const fakeAgent = { ...agent };
+        if (fakeAgent.current_location) {
+          // String bo'lsa, numberga aylantiramiz
+          const lat = typeof fakeAgent.current_location.latitude === "string"
+            ? parseFloat(fakeAgent.current_location.latitude)
+            : fakeAgent.current_location.latitude;
+
+          const lng = typeof fakeAgent.current_location.longitude === "string"
+            ? parseFloat(fakeAgent.current_location.longitude)
+            : fakeAgent.current_location.longitude;
+
+          // Yangi koordinatalar
+          const newLat = lat + (Math.random() - 0.5) * 0.001;
+          const newLng = lng + (Math.random() - 0.5) * 0.001;
+
+          // Qayta o'zgartiramiz
+          fakeAgent.current_location = {
+            latitude: newLat,
+            longitude: newLng,
+          };
+
+          updatedAgent = fakeAgent;
         }
-
-        if (updatedAgent && updatedAgent.current_location) {
-          setSelectedAgentData(updatedAgent);
-          updateAgentOnMap(updatedAgent);
-          setLastUpdate(new Date());
-        }
-      } catch (err) {
-        console.error("Tracking error:", err);
+      } else {
+        const token = localStorage.getItem("access_token");
+        const res = await axios.get("https://gps.mxsoft.uz/account/agent-list/", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        updatedAgent = res.data.results.find((a: Agent) => a.id === selectedAgent);
       }
-    }, 3000);
-  };
+
+      if (updatedAgent && updatedAgent.current_location) {
+        setSelectedAgentData(updatedAgent);
+        updateAgentOnMap(updatedAgent);
+        setLastUpdate(new Date());
+      }
+    } catch (err) {
+      console.error("Tracking error:", err);
+    }
+  }, 3000);
+};
 
   // Tracking to'xtatish
   const stopTracking = () => {
@@ -433,7 +474,7 @@ export default function RealTimeComponent() {
                     variant="destructive"
                     className="flex-1"
                   >
-                    To'xtatish
+                    Toxtatish
                   </Button>
                   <Button
                     onClick={toggleFollowMode}
@@ -456,7 +497,7 @@ export default function RealTimeComponent() {
       {selectedAgentData && (
         <Card className="bg-white">
           <CardHeader>
-            <CardTitle>Agent Ma'lumotlari</CardTitle>
+            <CardTitle>Agent Malumotlari</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-2 text-sm">
@@ -465,8 +506,8 @@ export default function RealTimeComponent() {
                 <strong>Koordinatalar:</strong>{" "}
                 {selectedAgentData.current_location ? (
                   (() => {
-                    const lat = parseFloat(selectedAgentData.current_location!.latitude as any);
-                    const lng = parseFloat(selectedAgentData.current_location!.longitude as any);
+                    const lat = parseFloat(selectedAgentData.current_location!.latitude as string);
+                    const lng = parseFloat(selectedAgentData.current_location!.longitude as string);
                     return isNaN(lat) || isNaN(lng)
                       ? "Noto'g'ri koordinatalar"
                       : `${lat.toFixed(6)}, ${lng.toFixed(6)}`;

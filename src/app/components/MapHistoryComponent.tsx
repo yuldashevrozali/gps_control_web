@@ -36,6 +36,18 @@ type Contract = {
   end_date?: string;
   total_paid?: string;
 };
+
+type ClientFromAPI = {
+  id: number;
+  first_name: string;
+  last_name: string;
+  phone_number: string;
+  latitude: string;
+  longitude: string;
+  address_name: string;
+  address_type: string;
+  isBlackList: boolean;
+};
 type AgentLocation = { latitude: number; longitude: number; is_stop: boolean };
 type Agent = {
   id: number;
@@ -131,6 +143,22 @@ function totalDistance(points: AgentLocation[]): number {
   return +total.toFixed(2);
 }
 
+// Yangi: Vaqtni formatlash
+function formatTime(timeString: string | undefined): string {
+  if (!timeString) return "Noma'lum";
+  const date = new Date(timeString);
+  // ISO formatni to'g'ri parse qilish uchun
+  if (isNaN(date.getTime())) return "Noto'g'ri sana";
+  return date.toLocaleString('uz-UZ', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+}
+
 const MapHistory = () => {
   const mapRef = useRef<L.Map | null>(null);
   const polylineRef = useRef<L.Polyline | null>(null);
@@ -146,6 +174,7 @@ const MapHistory = () => {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalData, setModalData] = useState<ModalData | null>(null);
+  const [clientsOnMap, setClientsOnMap] = useState<ClientFromAPI[]>([]);
 
   // Temani kuzatish
   useEffect(() => {
@@ -157,6 +186,57 @@ const MapHistory = () => {
     const interval = setInterval(checkThemeChange, 10);
     return () => clearInterval(interval);
   }, []);
+
+  // Mijozlarni API orqali olish
+useEffect(() => {
+  async function fetchClients() {
+    const accessToken = localStorage.getItem("access_token");
+    if (!accessToken) return;
+    try {
+      const res = await axios.get("https://gps.mxsoft.uz/location/clients-lists/", {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      setClientsOnMap(res.data.results || []);
+    } catch (error) {
+      console.error("Mijozlarni olishda xato:", error);
+      toast.error("Mijozlar ro'yxatini olishda xatolik.");
+    }
+  }
+  fetchClients();
+}, []);
+
+// Mijozlarni xaritaga joylash
+useEffect(() => {
+  if (!mapRef.current) return;
+
+  // Avvalgi client markerlarini tozalash
+  clientMarkersRef.current.forEach((m) => mapRef.current?.removeLayer(m));
+  clientMarkersRef.current = [];
+
+  clientsOnMap.forEach((client) => {
+    const lat = parseFloat(client.latitude);
+    const lon = parseFloat(client.longitude);
+
+    // Agar koordinatalar mavjud bo'lsa
+    if (isNaN(lat) || isNaN(lon)) return;
+
+    const marker = L.marker([lat, lon], {
+      icon: L.icon({
+        iconUrl: "/img/user.svg", // public papkaga joylangan bo'lishi kerak
+        iconSize: [40, 40],
+        iconAnchor: [20, 40],
+      }),
+    })
+      .addTo(mapRef.current!)
+      .bindPopup(
+        `<strong>Mijoz: ${client.first_name} ${client.last_name}</strong><br/>
+         📞 <a href="tel:${client.phone_number}">${client.phone_number}</a><br/>
+         📍 Manzil: ${client.address_name || "Noma'lum"}`
+      );
+
+    clientMarkersRef.current.push(marker);
+  });
+}, [clientsOnMap]);
 
   // Agentlar ro'yxatini olish
   useEffect(() => {
@@ -371,9 +451,9 @@ const MapHistory = () => {
           }}>
             📞 {SelectID ? agents.find(a => a.id === SelectID)?.phone_number || 'Noma\'lum' : 'Tanlang'}
             &nbsp;|&nbsp;
-            ⏰ {SelectID ? 'Boshlanish: ...' : 'Boshlanish'}
+            ⏰ {SelectID ? formatTime(agents.find(a => a.id === SelectID)?.start_time) : 'Boshlanish'}
             &nbsp;|&nbsp;
-            ⏰ {SelectID ? 'Tugash: ...' : 'Tugash'}
+            ⏰ {SelectID ? formatTime(agents.find(a => a.id === SelectID)?.end_time) : 'Tugash'}
           </div>
 
           {/* SANA TANLASH */}
