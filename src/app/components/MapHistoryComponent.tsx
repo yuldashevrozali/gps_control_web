@@ -222,7 +222,7 @@ useEffect(() => {
 
     const marker = L.marker([lat, lon], {
       icon: L.icon({
-        iconUrl: "/img/user.svg", // public papkaga joylangan bo'lishi kerak
+        iconUrl: "/icons/user-avatar.svg", // public papkaga joylangan bo'lishi kerak
         iconSize: [40, 40],
         iconAnchor: [20, 40],
       }),

@@ -139,7 +139,7 @@ const Payroll = () => {
         minute: "2-digit",
       }),
       "To'lov turi": item.method === "CLICK" ? "Click" : item.method === "CASH" ? "Naqd" : item.method === "CARD" ? "Karta" : item.method,
-      "Holati": item.is_successful ? "Muvaffaqiyatli" : "Bekor qilingan",
+      "Holati": item.is_successful ? "Yuklandi" : "Yuklanmadi",
       "Client ID": item.client_id,
       "Agent": item.processed_by_name,
     }));

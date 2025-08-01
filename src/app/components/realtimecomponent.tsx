@@ -49,7 +49,6 @@ export default function RealTimeComponent() {
   const [error, setError] = useState<string>("");
   const [isTracking, setIsTracking] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
-  const [demoMode, setDemoMode] = useState(false);
   const [followMode, setFollowMode] = useState(true); // Yangi: Follow Mode
 
   const mapRef = useRef<L.Map | null>(null);
@@ -59,7 +58,32 @@ export default function RealTimeComponent() {
   const pathRef = useRef<L.Polyline | null>(null);
   const locationHistoryRef = useRef<Record<string, string[]>>({});
   const warnedAgentsRef = useRef<Set<string>>(new Set());
-  const initialViewSet = useRef(false); // Boshlang'ich ko'rinish faqat bir marta
+
+  // Foydalanuvchi xaritani harakatlantirsa, followMode o'chadi
+useEffect(() => {
+  if (!mapRef.current) return;
+
+  const handleUserInteraction = () => {
+    if (followMode) {
+      setFollowMode(false);
+      toast("Follow Mode avtomatik o'chirildi", {
+        icon: "🛑",
+        style: { background: "#fff7e6", border: "1px solid #ffc107", color: "#333" },
+      });
+    }
+  };
+
+  mapRef.current.on("dragstart", handleUserInteraction);
+  mapRef.current.on("zoomstart", handleUserInteraction);
+
+  return () => {
+    if (mapRef.current) {
+      mapRef.current.off("dragstart", handleUserInteraction);
+      mapRef.current.off("zoomstart", handleUserInteraction);
+    }
+  };
+}, [followMode]);
+
 
   // Theme ni kuzatish
   useEffect(() => {
@@ -197,7 +221,6 @@ export default function RealTimeComponent() {
 
       setAgents(agentsWithNumbers);
       setError("");
-      setDemoMode(false);
     } catch (err: unknown) {
       const axiosError = err as AxiosError;
       if (axiosError.code === "ECONNABORTED") {
@@ -234,7 +257,6 @@ export default function RealTimeComponent() {
     ];
     setAgents(demoAgents);
     setError("");
-    setDemoMode(true);
     setLoading(false);
     toast("Demo mode ishga tushirildi", { icon: "🌍" });
   };
@@ -253,105 +275,93 @@ export default function RealTimeComponent() {
   };
 
   // Agentni yangilash (markazga olib kelinmaydi, faqat followMode=true bo'lsa)
-  const updateAgentOnMap = (agent: Agent) => {
-    const loc = agent.current_location;
-    if (!loc) return;
-    const lat = parseFloat(loc.latitude as string );
-    const lng = parseFloat(loc.longitude as string);
-    if (isNaN(lat) || isNaN(lng) || !mapRef.current) return;
+ const updateAgentOnMap = (agent: Agent) => {
+  const loc = agent.current_location;
+  if (!loc) return;
 
-    const point: [number, number] = [lat, lng];
+  // Koordinatalarni xavfsiz olish
+  const lat = typeof loc.latitude === "string" || typeof loc.latitude === "number"
+    ? parseFloat(loc.latitude.toString())
+    : NaN;
 
-    // Path
-    const storedPaths = localStorage.getItem("agentPaths");
-    const parsedPaths: Record<string, [number, number][]> = storedPaths ? JSON.parse(storedPaths) : {};
-    const newPath = [...(parsedPaths[agent.id] || []), point];
-    parsedPaths[agent.id] = newPath;
-    localStorage.setItem("agentPaths", JSON.stringify(parsedPaths));
-    drawPath(newPath);
+  const lng = typeof loc.longitude === "string" || typeof loc.longitude === "number"
+    ? parseFloat(loc.longitude.toString())
+    : NaN;
 
-    // Marker
-    if (!markerRefs.current[agent.id]) {
-      markerRefs.current[agent.id] = L.marker(point).addTo(mapRef.current);
-    } else {
-      markerRefs.current[agent.id].setLatLng(point);
-    }
+  if (isNaN(lat) || isNaN(lng) || !mapRef.current) return;
 
-    // Faqat Follow Mode yoqilgan bo'lsa, xaritani markazga olib keling
-    if (followMode) {
-      mapRef.current.setView(point, 15);
-    }
+  const point: [number, number] = [lat, lng];
 
-    // Harakatsizlikni tekshirish
-    const coordStr = `${lat.toFixed(6)},${lng.toFixed(6)}`;
-    const history = locationHistoryRef.current[agent.id] || [];
-    history.push(coordStr);
-    if (history.length > 1200) history.shift();
-    locationHistoryRef.current[agent.id] = history;
+  // Pathni localstorage dan olish
+  const stored = localStorage.getItem("agentPaths");
+  const paths: Record<string, [number, number][]> = stored ? JSON.parse(stored) : {};
+  const newPath = [...(paths[agent.id] || []), point];
+  paths[agent.id] = newPath;
+  localStorage.setItem("agentPaths", JSON.stringify(paths));
 
-    const allSame = history.length === 1200 && history.every((c) => c === history[0]);
-    if (allSame && !warnedAgentsRef.current.has(agent.id)) {
-      toast("Agent 10 soniyadan beri bir joyda turibdi", {
-        icon: "⚠️",
-        style: { background: "#fff7e6", border: "1px solid #ffc107", color: "#333" },
-      });
-      warnedAgentsRef.current.add(agent.id);
-    } else if (!allSame && warnedAgentsRef.current.has(agent.id)) {
-      warnedAgentsRef.current.delete(agent.id);
-    }
-  };
+  // Yo'lni chizish
+  drawPath(newPath);
+
+  // Marker yangilash
+  if (!markerRefs.current[agent.id]) {
+    markerRefs.current[agent.id] = L.marker(point).addTo(mapRef.current);
+  } else {
+    markerRefs.current[agent.id].setLatLng(point);
+  }
+
+  // 🔹 FAQAT followMode yoqilganda xaritani markazga olib keling
+  if (followMode && mapRef.current) {
+  const currentView = mapRef.current.getCenter();
+  const currentZoom = mapRef.current.getZoom();
+
+  // Agar xarita allaqachon shu joyda bo‘lsa, setView qilish shart emas
+  if (Math.abs(currentView.lat - lat) > 0.0001 || Math.abs(currentView.lng - lng) > 0.0001) {
+    mapRef.current.setView(point, currentZoom); // zoomni o'zgartirmay, faqat markazni o'zgartiramiz
+  }
+}
+
+
+  // Harakatsizlikni tekshirish
+  const coordStr = `${lat.toFixed(6)},${lng.toFixed(6)}`;
+  const history = locationHistoryRef.current[agent.id] || [];
+  history.push(coordStr);
+  if (history.length > 1200) history.shift();
+  locationHistoryRef.current[agent.id] = history;
+
+  const allSame = history.length === 1200 && history.every((c) => c === history[0]);
+  if (allSame && !warnedAgentsRef.current.has(agent.id)) {
+    toast("Agent 10 soniyadan beri bir joyda turibdi", {
+      icon: "⚠️",
+      style: { background: "#fff7e6", border: "1px solid #ffc107", color: "#333" },
+    });
+    warnedAgentsRef.current.add(agent.id);
+  } else if (!allSame && warnedAgentsRef.current.has(agent.id)) {
+    warnedAgentsRef.current.delete(agent.id);
+  }
+}; 
 
   // Tracking boshlash
- const startTracking = async () => {
+const startTracking = async () => {
   const agent = agents.find((a) => a.id === selectedAgent);
   if (!agent) return;
 
   setSelectedAgentData(agent);
   setIsTracking(true);
-  setFollowMode(true);
-  initialViewSet.current = false;
+  setFollowMode(false); // Boshida follow mode yoqilgan
   updateAgentOnMap(agent);
   setLastUpdate(new Date());
 
   trackingIntervalRef.current = setInterval(async () => {
     try {
-      let updatedAgent: Agent | undefined;
+      const token = localStorage.getItem("access_token");
+      const res = await axios.get("https://gps.mxsoft.uz/account/agent-list/", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
-      if (demoMode) {
-        const fakeAgent = { ...agent };
-        if (fakeAgent.current_location) {
-          // String bo'lsa, numberga aylantiramiz
-          const lat = typeof fakeAgent.current_location.latitude === "string"
-            ? parseFloat(fakeAgent.current_location.latitude)
-            : fakeAgent.current_location.latitude;
-
-          const lng = typeof fakeAgent.current_location.longitude === "string"
-            ? parseFloat(fakeAgent.current_location.longitude)
-            : fakeAgent.current_location.longitude;
-
-          // Yangi koordinatalar
-          const newLat = lat + (Math.random() - 0.5) * 0.001;
-          const newLng = lng + (Math.random() - 0.5) * 0.001;
-
-          // Qayta o'zgartiramiz
-          fakeAgent.current_location = {
-            latitude: newLat,
-            longitude: newLng,
-          };
-
-          updatedAgent = fakeAgent;
-        }
-      } else {
-        const token = localStorage.getItem("access_token");
-        const res = await axios.get("https://gps.mxsoft.uz/account/agent-list/", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        updatedAgent = res.data.results.find((a: Agent) => a.id === selectedAgent);
-      }
-
+      const updatedAgent = res.data.results.find((a: Agent) => a.id === selectedAgent);
       if (updatedAgent && updatedAgent.current_location) {
         setSelectedAgentData(updatedAgent);
-        updateAgentOnMap(updatedAgent);
+        updateAgentOnMap(updatedAgent); // Bu yerda ham followMode tekshiriladi
         setLastUpdate(new Date());
       }
     } catch (err) {
@@ -382,17 +392,29 @@ export default function RealTimeComponent() {
 
   // Follow Mode o'zgartirish
   const toggleFollowMode = () => {
-    if (!isTracking) return;
-    const newMode = !followMode;
-    setFollowMode(newMode);
-    if (newMode && selectedAgentData) {
-      const loc = selectedAgentData.current_location;
-      if (loc) {
-        mapRef.current?.setView([loc.latitude as number, loc.longitude as number], 15);
+  if (!isTracking) return;
+  const newMode = !followMode;
+  setFollowMode(newMode);
+
+  // Agar yangi rejim yoqilsa, xaritani agentga markazga olib keling
+  if (newMode && selectedAgentData) {
+    const loc = selectedAgentData.current_location;
+    if (loc) {
+      const lat = typeof loc.latitude === "string" || typeof loc.latitude === "number"
+        ? parseFloat(loc.latitude.toString())
+        : NaN;
+      const lng = typeof loc.longitude === "string" || typeof loc.longitude === "number"
+        ? parseFloat(loc.longitude.toString())
+        : NaN;
+
+      if (!isNaN(lat) && !isNaN(lng) && mapRef.current) {
+        mapRef.current.setView([lat, lng], 15);
       }
     }
-    toast.success(`Follow Mode: ${newMode ? "Yoqildi" : "O'chdi"}`);
-  };
+  }
+
+  toast.success(`Follow Mode: ${newMode ? "Yoqildi" : "O'chdi"}`);
+}; 
 
   // Agent tanlanganda pathni yuklash
   useEffect(() => {
@@ -418,7 +440,8 @@ export default function RealTimeComponent() {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white p-4 rounded-lg shadow">
+      <div className="flex justify-content-center align-items-center">
+<div className="bg-white p-4 rounded-lg shadow">
         <h3 className="text-lg font-semibold mb-3">Agentni tanlang</h3>
         {loading ? (
           <div className="flex items-center justify-center py-4">
@@ -501,7 +524,6 @@ export default function RealTimeComponent() {
           </CardHeader>
           <CardContent>
             <div className="space-y-2 text-sm">
-              <p><strong>Ism:</strong> {selectedAgentData.name}</p>
               <p>
                 <strong>Koordinatalar:</strong>{" "}
                 {selectedAgentData.current_location ? (
@@ -517,11 +539,12 @@ export default function RealTimeComponent() {
                 )}
               </p>
               <p><strong>Yangilangan:</strong> {lastUpdate.toLocaleString()}</p>
-              <p><strong>Follow Mode:</strong> {followMode ? "Yoqilgan" : "O'chgan"}</p>
             </div>
           </CardContent>
         </Card>
       )}
+      </div>
+      
 
       <div
         style={{ height: "70vh", minHeight: "400px", maxHeight: "80vh" }}
