@@ -324,7 +324,7 @@ const Candidates = () => {
       {filteredNotes.length > itemsPerPage && (
         <div className="mt-4 text-center text-gray-600">
           Jami {filteredNotes.length} ta yozuv mavjud. Har sahifada{" "}
-          {itemsPerPage} ta ko'rsatilmoqda.
+          {itemsPerPage} ta korsatilmoqda.
         </div>
       )}
     </div>

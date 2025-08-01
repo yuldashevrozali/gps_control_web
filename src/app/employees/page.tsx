@@ -181,6 +181,7 @@ const AllEmployees = () => {
             <DropdownMenuTrigger asChild>
               <Button variant="outline" className="text-sm flex gap-2">
                 <Filter className="w-4 h-4" /> Filter
+                
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="p-4 text-sm">
