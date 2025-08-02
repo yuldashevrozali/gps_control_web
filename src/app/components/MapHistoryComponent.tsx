@@ -193,9 +193,12 @@ useEffect(() => {
     const accessToken = localStorage.getItem("access_token");
     if (!accessToken) return;
     try {
-      const res = await axios.get("https://gps.mxsoft.uz/location/clients-lists/", {
+      const res = await axios.get("https://gps.mxsoft.uz/location/clients-list/", {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
+      console.log("Token:", accessToken);
+console.log("Mijozlar response:", res.data);
+
       setClientsOnMap(res.data.results || []);
     } catch (error) {
       console.error("Mijozlarni olishda xato:", error);
@@ -204,6 +207,8 @@ useEffect(() => {
   }
   fetchClients();
 }, []);
+
+
 
 // Mijozlarni xaritaga joylash
 useEffect(() => {
@@ -222,7 +227,7 @@ useEffect(() => {
 
     const marker = L.marker([lat, lon], {
       icon: L.icon({
-        iconUrl: "/icons/user-avatar.svg", // public papkaga joylangan bo'lishi kerak
+        iconUrl: "/icons/user-avatar1.png", // public papkaga joylangan bo'lishi kerak
         iconSize: [40, 40],
         iconAnchor: [20, 40],
       }),
