@@ -159,7 +159,7 @@ const Payroll = () => {
   };
 
   return (
-    <div className=" max-w-7xl mx-auto">
+    <div className="w-full px-4">
       <h2 className="text-2xl font-bold mb-6 mt-10">🧾 Tolovlar Jadvali</h2>
 
       {/* Qidiruv va filtrlar */}
@@ -253,7 +253,7 @@ const Payroll = () => {
                       {item.method === "CLICK" ? "Click" : item.method === "CASH" ? "Naqd" : item.method === "CARD" ? "Karta" : item.method}
                     </TableCell>
                     <TableCell className="border border-gray-300 px-4 py-2">
-                      {item.is_successful ? "✅ Muvaffaqiyatli" : "❌ Bekor"}
+                      {item.is_successful ? "✅ Yuklandi" : "❌ Yuklanmadi"}
                     </TableCell>
                     <TableCell className="border border-gray-300 px-4 py-2">{item.client_id}</TableCell>
                     <TableCell className="border border-gray-300 px-4 py-2">{item.processed_by_name}</TableCell>
