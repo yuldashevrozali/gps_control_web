@@ -175,6 +175,8 @@ const MapHistory = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalData, setModalData] = useState<ModalData | null>(null);
   const [clientsOnMap, setClientsOnMap] = useState<ClientFromAPI[]>([]);
+  const allClientMarkersRef = useRef<L.Marker[]>([]);
+const agentClientMarkersRef = useRef<L.Marker[]>([]);
 
   // Temani kuzatish
   useEffect(() => {
@@ -210,33 +212,14 @@ console.log("Mijozlar response:", res.data);
 
 
 
-// selectedAgentData o'zgarganda clientsOnMap ni yangilash
-useEffect(() => {
-  if (selectedAgentData?.clients?.length) {
-    const clientsMapped: ClientFromAPI[] = selectedAgentData.clients.map((c) => ({
-      id: c.id,
-      first_name: c.full_name.split(" ")[0] || "Ism",
-      last_name: c.full_name.split(" ")[1] || "",
-      phone_number: "",
-      latitude: c.latitude ? c.latitude.toString() : "0",
-longitude: c.longitude ? c.longitude.toString() : "0",
 
-      address_name: "", 
-      address_type: "",
-      isBlackList: false,
-    }));
-    setClientsOnMap(clientsMapped);
-  } else {
-    setClientsOnMap([]);
-  }
-}, [selectedAgentData]);
-
+// Mijozlarni xaritaga joylash
 // Mijozlarni xaritaga joylash
 useEffect(() => {
   if (!mapRef.current) return;
 
-  clientMarkersRef.current.forEach((m) => mapRef.current?.removeLayer(m));
-  clientMarkersRef.current = [];
+  allClientMarkersRef.current.forEach((m) => mapRef.current?.removeLayer(m));
+  allClientMarkersRef.current = [];
 
   clientsOnMap.forEach((client) => {
     const lat = parseFloat(client.latitude);
@@ -256,10 +239,33 @@ useEffect(() => {
          📞 <a href="tel:${client.phone_number}">${client.phone_number}</a><br/>
          📍 Manzil: ${client.address_name || "Noma'lum"}`
       );
-
-    clientMarkersRef.current.push(marker);
+    allClientMarkersRef.current.push(marker);
   });
-}, [clientsOnMap]); // mapRef.current ni qo'shish ham xavfsiz, lekin kerak emas 
+}, [clientsOnMap]);// 👈 selectedAgentData ham qo'shildi // mapRef.current ni qo'shish ham xavfsiz, lekin kerak emas 
+useEffect(() => {
+  if (!selectedAgentData || !mapRef.current) return;
+
+  // Faqat agent bilan ishlagan mijoz markerlarini tozalash
+  agentClientMarkersRef.current.forEach((m) => mapRef.current!.removeLayer(m));
+  agentClientMarkersRef.current = [];
+
+  selectedAgentData.contracts?.forEach((c) => {
+    c.client.static_locations.forEach((loc) => {
+      const marker = L.marker([loc.lat, loc.lon], {
+        icon: L.icon({
+          iconUrl: "/img/user-svgrepo-com.svg",
+          iconSize: [40, 40],
+          iconAnchor: [20, 40],
+        }),
+      })
+        .addTo(mapRef.current!)
+        .bindPopup(
+          `<strong>${c.client.full_name}</strong><br/>📄 ${c.contract_number}<br/>💰 ${c.total_debt_1c.toLocaleString()} so'm`
+        );
+      agentClientMarkersRef.current.push(marker);
+    });
+  });
+}, [selectedAgentData]);
 
   // Agentlar ro'yxatini olish
   useEffect(() => {
