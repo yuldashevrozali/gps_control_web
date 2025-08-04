@@ -49,7 +49,7 @@ type ClientFromAPI = {
   isBlackList: boolean;
   contracts: ContractType[];
 };
-type AgentLocation = { latitude: number; longitude: number; is_stop: boolean };
+type AgentLocation = { latitude: number; longitude: number; is_stop: boolean; timestamp:string };
 type Agent = {
   id: number;
   full_name: string;
@@ -238,7 +238,6 @@ useEffect(() => {
   allClientMarkersRef.current = [];
 
   clientsOnMap.forEach((client) => {
-    console.log(225,client);
     
     const lat = parseFloat(client.latitude);
     const lon = parseFloat(client.longitude);
@@ -372,80 +371,152 @@ useEffect(() => {
 
   // Xaritani yangilash
   useEffect(() => {
-    if (!selectedAgentData || !mapRef.current) return;
-    const {  location_history, contracts } = selectedAgentData;
+  if (!selectedAgentData || !mapRef.current) return;
 
-    // Markerlarni tozalash
-    [polylineRef, startMarkerRef, endMarkerRef].forEach((ref) => {
-      if (ref.current) mapRef.current!.removeLayer(ref.current);
-    });
-    [...stopMarkersRef.current, ...clientMarkersRef.current].forEach((m) => mapRef.current!.removeLayer(m));
-    stopMarkersRef.current = [];
-    clientMarkersRef.current = [];
+  const { location_history, contracts } = selectedAgentData;
 
-    // Marshrut
-    const path: L.LatLngTuple[] = location_history.map((l) => [l.latitude, l.longitude]);
-    polylineRef.current = L.polyline(path, { color: "blue" }).addTo(mapRef.current);
+  // Eski markerlar va polyline'lar tozalanadi
+  [polylineRef, startMarkerRef, endMarkerRef].forEach((ref) => {
+    if (ref.current) mapRef.current!.removeLayer(ref.current);
+  });
+  [...stopMarkersRef.current, ...clientMarkersRef.current].forEach((m) =>
+    mapRef.current!.removeLayer(m)
+  );
+  stopMarkersRef.current = [];
+  clientMarkersRef.current = [];
 
-    // Boshlanish markeri
-    const startLatLng: L.LatLngTuple = path[0];
-    const start = L.marker(startLatLng, {
-      icon: L.icon({
-        iconUrl: "https://maps.google.com/mapfiles/ms/icons/green-dot.png",
-        iconSize: [36, 36],
-        iconAnchor: [18, 36],
-      }),
-    }).addTo(mapRef.current);
-    startMarkerRef.current = start;
+  if (!location_history || location_history.length === 0) return;
 
-    // Tugash markeri
-    const endLatLng: L.LatLngTuple = path[path.length - 1];
-    const end = L.marker(endLatLng, {
-      icon: L.icon({
-        iconUrl: "https://maps.google.com/mapfiles/ms/icons/red-dot.png",
-        iconSize: [32, 32],
-        iconAnchor: [16, 32],
-      }),
-    }).addTo(mapRef.current);
-    endMarkerRef.current = end;
+  // ✅ MARSHRUTNI SEGMENTLASH
+  const segments: L.LatLngTuple[][] = [];
+  let currentSegment: L.LatLngTuple[] = [];
 
-    // To'xtash markerlari
-    location_history.forEach((loc, i) => {
-      if (loc.is_stop) {
-        const dist = totalDistance(location_history.slice(0, i + 1));
-        const marker = L.marker([loc.latitude, loc.longitude], {
-          icon: L.icon({
-            iconUrl: "https://maps.google.com/mapfiles/ms/icons/yellow-dot.png",
-            iconSize: [32, 32],
-            iconAnchor: [16, 32],
-          }),
-        })
-          .addTo(mapRef.current!)
-          .bindPopup(`To'xtash nuqtasi<br/>🧭 ${dist.toFixed(2)} km`);
-        stopMarkersRef.current.push(marker);
+  for (let i = 0; i < location_history.length; i++) {
+    const point = location_history[i];
+    const latlng: L.LatLngTuple = [point.latitude, point.longitude];
+
+    if (i > 0) {
+      const prev = location_history[i - 1];
+      const prevTime = new Date(prev.timestamp).getTime();
+      const currTime = new Date(point.timestamp).getTime();
+      const diffMinutes = (currTime - prevTime) / (1000 * 60);
+
+      if (diffMinutes > 1) {
+        if (currentSegment.length > 1) segments.push(currentSegment);
+        currentSegment = [];
       }
-    });
+    }
 
-    // Mijoz markerlari
-    contracts?.forEach((c) => {
-      c.client.static_locations.forEach((loc) => {
-        const marker = L.marker([loc.lat, loc.lon], {
-          icon: L.icon({
-            iconUrl: "/img/user-svgrepo-com.svg",
-            iconSize: [40, 40],
-            iconAnchor: [20, 40],
-          }),
-        })
-          .addTo(mapRef.current!)
-          .bindPopup(
-            `<strong>${c.client.full_name}</strong><br/>📄 ${c.contract_number}<br/>💰 ${c.total_debt_1c.toLocaleString()} so'm`
-          );
-        clientMarkersRef.current.push(marker);
-      });
-    });
+    currentSegment.push(latlng);
+  }
+  if (currentSegment.length > 1) segments.push(currentSegment);
 
+  // ✅ Segmentlarga asoslangan polyline chizish
+  segments.forEach((segment) => {
+    const poly = L.polyline(segment, { color: "blue" }).addTo(mapRef.current!);
+    // Faqat oxirgisi polylineRef'da saqlanadi (xarita fitBounds uchun)
+    polylineRef.current = poly;
+  });
+
+  // ✅ Boshlanish markeri
+  const startLatLng = segments[0][0];
+  const start = L.marker(startLatLng, {
+    icon: L.icon({
+      iconUrl: "https://maps.google.com/mapfiles/ms/icons/green-dot.png",
+      iconSize: [36, 36],
+      iconAnchor: [18, 36],
+    }),
+  }).addTo(mapRef.current);
+  startMarkerRef.current = start;
+
+  // ✅ Tugash markeri
+  const lastSegment = segments[segments.length - 1];
+  const endLatLng = lastSegment[lastSegment.length - 1];
+  const end = L.marker(endLatLng, {
+    icon: L.icon({
+      iconUrl: "https://maps.google.com/mapfiles/ms/icons/red-dot.png",
+      iconSize: [32, 32],
+      iconAnchor: [16, 32],
+    }),
+  }).addTo(mapRef.current);
+  endMarkerRef.current = end;
+
+  // ✅ Disconnect markerlari
+  for (let i = 1; i < location_history.length; i++) {
+    const prev = location_history[i - 1];
+    const curr = location_history[i];
+    const prevTime = new Date(prev.timestamp).getTime();
+    const currTime = new Date(curr.timestamp).getTime();
+    const diffMinutes = (currTime - prevTime) / (1000 * 60);
+
+    if (diffMinutes > 1) {
+      const disconnectMarker = L.marker([prev.latitude, prev.longitude], {
+        icon: L.icon({
+          iconUrl: "/icons/disconnect-red.png",
+          iconSize: [28, 28],
+          iconAnchor: [14, 28],
+        }),
+      })
+        .addTo(mapRef.current!)
+        .bindPopup(`❌ Harakat yo'q (>${diffMinutes.toFixed(1)} daqiqa)`);
+
+      const reconnectMarker = L.marker([curr.latitude, curr.longitude], {
+        icon: L.icon({
+          iconUrl: "/icons/reconnect-blue.png",
+          iconSize: [28, 28],
+          iconAnchor: [14, 28],
+        }),
+      })
+        .addTo(mapRef.current!)
+        .bindPopup(`✅ Harakat tiklandi`);
+
+      stopMarkersRef.current.push(disconnectMarker, reconnectMarker);
+    }
+  }
+
+  // ✅ To‘xtash nuqtalari
+  location_history.forEach((loc, i) => {
+    if (loc.is_stop) {
+      const dist = totalDistance(location_history.slice(0, i + 1));
+      const marker = L.marker([loc.latitude, loc.longitude], {
+        icon: L.icon({
+          iconUrl: "https://maps.google.com/mapfiles/ms/icons/yellow-dot.png",
+          iconSize: [32, 32],
+          iconAnchor: [16, 32],
+        }),
+      })
+        .addTo(mapRef.current!)
+        .bindPopup(`To'xtash nuqtasi<br/>🧭 ${dist.toFixed(2)} km`);
+      stopMarkersRef.current.push(marker);
+    }
+  });
+
+  // ✅ Mijoz markerlari
+  contracts?.forEach((c) => {
+    c.client.static_locations.forEach((loc) => {
+      const marker = L.marker([loc.lat, loc.lon], {
+        icon: L.icon({
+          iconUrl: "/img/user-svgrepo-com.svg",
+          iconSize: [40, 40],
+          iconAnchor: [20, 40],
+        }),
+      })
+        .addTo(mapRef.current!)
+        .bindPopup(
+          `<strong>${c.client.full_name}</strong><br/>📄 ${c.contract_number}<br/>💰 ${parseFloat(c.total_debt_1c || "0").toLocaleString()} so'm`
+        );
+      clientMarkersRef.current.push(marker);
+    });
+  });
+
+  // ✅ Xaritani fit qilish
+  if (polylineRef.current) {
     mapRef.current.fitBounds(polylineRef.current.getBounds());
-  }, [selectedAgentData]);
+  }
+}, [selectedAgentData]);
+ 
+ 
+
 
   // "Batafsil" tugmasi bosilganda modal ochish
   const openModal = () => {
