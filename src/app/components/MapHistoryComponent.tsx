@@ -210,24 +210,42 @@ console.log("Mijozlar response:", res.data);
 
 
 
+// selectedAgentData o'zgarganda clientsOnMap ni yangilash
+useEffect(() => {
+  if (selectedAgentData?.clients?.length) {
+    const clientsMapped: ClientFromAPI[] = selectedAgentData.clients.map((c) => ({
+      id: c.id,
+      first_name: c.full_name.split(" ")[0] || "Ism",
+      last_name: c.full_name.split(" ")[1] || "",
+      phone_number: "",
+      latitude: c.latitude ? c.latitude.toString() : "0",
+longitude: c.longitude ? c.longitude.toString() : "0",
+
+      address_name: "", 
+      address_type: "",
+      isBlackList: false,
+    }));
+    setClientsOnMap(clientsMapped);
+  } else {
+    setClientsOnMap([]);
+  }
+}, [selectedAgentData]);
+
 // Mijozlarni xaritaga joylash
 useEffect(() => {
   if (!mapRef.current) return;
 
-  // Avvalgi client markerlarini tozalash
   clientMarkersRef.current.forEach((m) => mapRef.current?.removeLayer(m));
   clientMarkersRef.current = [];
 
   clientsOnMap.forEach((client) => {
     const lat = parseFloat(client.latitude);
     const lon = parseFloat(client.longitude);
-
-    // Agar koordinatalar mavjud bo'lsa
     if (isNaN(lat) || isNaN(lon)) return;
 
     const marker = L.marker([lat, lon], {
       icon: L.icon({
-        iconUrl: "/icons/user-avatar1.png", // public papkaga joylangan bo'lishi kerak
+        iconUrl: "/icons/user-avatar1.png",
         iconSize: [40, 40],
         iconAnchor: [20, 40],
       }),
@@ -241,7 +259,7 @@ useEffect(() => {
 
     clientMarkersRef.current.push(marker);
   });
-}, [clientsOnMap]);
+}, [clientsOnMap]); // mapRef.current ni qo'shish ham xavfsiz, lekin kerak emas 
 
   // Agentlar ro'yxatini olish
   useEffect(() => {
@@ -262,49 +280,45 @@ useEffect(() => {
   }, []);
 
   // Agent ma'lumotlarini olish
-  useEffect(() => {
-    if (!SelectID || !selectedDate) return;
-    const accessToken = localStorage.getItem("access_token");
-    if (!accessToken) return;
+// Agent ma'lumotlarini olish
+useEffect(() => {
+  if (!SelectID || !selectedDate) return;
+  const accessToken = localStorage.getItem("access_token");
+  if (!accessToken) return;
 
-    setSelectedAgentData(null);
-    [polylineRef, startMarkerRef, endMarkerRef].forEach((ref) => {
-      if (ref.current && mapRef.current) {
-        mapRef.current.removeLayer(ref.current);
-        ref.current = null;
-      }
-    });
-    stopMarkersRef.current.forEach((m) => mapRef.current?.removeLayer(m));
-    stopMarkersRef.current = [];
-    clientMarkersRef.current.forEach((m) => mapRef.current?.removeLayer(m));
-    clientMarkersRef.current = [];
+  setSelectedAgentData(null);
 
-    const formattedDate = selectedDate.toISOString().split("T")[0];
+  // Faqat agent marshrutini tozalash
+  [polylineRef, startMarkerRef, endMarkerRef].forEach((ref) => {
+    if (ref.current && mapRef.current) {
+      mapRef.current.removeLayer(ref.current);
+      ref.current = null;
+    }
+  });
+  stopMarkersRef.current.forEach((m) => mapRef.current?.removeLayer(m));
+  stopMarkersRef.current = [];
 
-    axios
-      .get("https://gps.mxsoft.uz/payments/agent/daily-detail/", {
-        params: { agent_id: SelectID, date: formattedDate },
-        headers: { Authorization: `Bearer ${accessToken}` },
-      })
-      .then((res) => {
-        const data = res.data;
-        if (!data.location_history?.length) {
-          toast.error(`${data.agent?.full_name || 'Agent'} uchun lokatsiya mavjud emas!`);
-          setSelectedAgentData(null);
-          return;
-        }
-        setSelectedAgentData(data);
-      })
-      .catch((err) => {
-        console.error("API xatosi:", err);
-        if (err.response?.status === 401) {
-          toast.error("Avtorizatsiya xatosi. Qayta kirish talab qilinadi.");
-        } else {
-          toast.error("Ma'lumot olishda xato.");
-        }
+  const formattedDate = selectedDate.toISOString().split("T")[0];
+  axios
+    .get("https://gps.mxsoft.uz/payments/agent/daily-detail/", {
+      params: { agent_id: SelectID, date: formattedDate },
+      headers: { Authorization: `Bearer ${accessToken}` },
+    })
+    .then((res) => {
+      const data = res.data;
+      if (!data.location_history?.length) {
+        toast.error(`${data.agent?.full_name || 'Agent'} uchun lokatsiya mavjud emas!`);
         setSelectedAgentData(null);
-      });
-  }, [SelectID, selectedDate]);
+        return;
+      }
+      setSelectedAgentData(data);
+    })
+    .catch((err) => {
+      console.error("API xatosi:", err);
+      toast.error("Ma'lumot olishda xato.");
+      setSelectedAgentData(null);
+    });
+}, [SelectID, selectedDate]); 
 
   // Xaritani boshlash
   useEffect(() => {
