@@ -503,7 +503,8 @@ useEffect(() => {
       })
         .addTo(mapRef.current!)
         .bindPopup(
-          `<strong>${c.client.full_name}</strong><br/>📄 ${c.contract_number}<br/>💰 ${parseFloat(c.total_debt_1c || "0").toLocaleString()} so'm`
+          `<strong>${c.client.full_name}</strong><br/>📄 ${c.contract_number}<br/>💰 ${parseFloat(String(c.total_debt_1c || "0")).toLocaleString()} so'm
+`
         );
       clientMarkersRef.current.push(marker);
     });
