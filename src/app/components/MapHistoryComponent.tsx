@@ -10,6 +10,11 @@ import { Calendar } from "@/components/ui/calendar";
 import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
 import markerIcon from "leaflet/dist/images/marker-icon.png";
 import markerShadow from "leaflet/dist/images/marker-shadow.png";
+import "leaflet-routing-machine";
+import "leaflet-routing-machine/dist/leaflet-routing-machine.css";
+
+
+
 
 // Leaflet markerlarni to'g'ri ko'rsatish
 // Leaflet markerlarni to'g'ri ko'rsatish
@@ -259,6 +264,8 @@ console.log("Mijozlar response:", res.data);
 
 
 
+
+
 // Mijozlarni xaritaga joylash
 // Mijozlarni xaritaga joylash
 useEffect(() => {
@@ -463,10 +470,30 @@ useEffect(() => {
   if (currentSegment.length > 1) segments.push(currentSegment);
 
   // Polyline'larni chizish
-  segments.forEach((segment) => {
-    const poly = L.polyline(segment, { color: "blue" }).addTo(mapRef.current!);
-    polylineRef.current = poly;
-  });
+  const waypoints = segments.flat().map(([lat, lon]) => L.latLng(lat, lon));
+
+// Routingni yaratish
+const routingControl = L.Routing.control({
+  waypoints,
+  lineOptions: {
+    styles: [
+      {
+      color: "#1A73E8",   // Yandex uslubidagi ko‘k rang
+      weight: 8,          // Biroz qalinroq
+      opacity: 0.95,      // Devor holatida shaffof emas
+    }
+    ],
+  },
+  routeWhileDragging: false,
+  show: false,
+  addWaypoints: false,
+  fitSelectedRoutes: true,
+  draggableWaypoints: false,
+  createMarker: () => null, // Marshrut bo‘yicha markerlar qo‘shilmasin
+}).addTo(mapRef.current!);
+
+// Saqlab qo‘yish uchun ref
+polylineRef.current = routingControl as unknown as L.Polyline;
 
   // Boshlanish markeri
   const startLatLng = segments[0][0];
@@ -598,10 +625,6 @@ contracts?.forEach((c, contractIdx) => {
 });
  
 
-  // Fit to all
-  if (polylineRef.current) {
-    mapRef.current.fitBounds(polylineRef.current.getBounds());
-  }
 }, [selectedAgentData]);
  ;
  
