@@ -47,6 +47,7 @@ type ClientFromAPI = {
   address_name: string;
   address_type: string;
   isBlackList: boolean;
+  contracts: ContractType[];
 };
 type AgentLocation = { latitude: number; longitude: number; is_stop: boolean };
 type Agent = {
@@ -87,12 +88,27 @@ type Clients = {
   contract_summary_1c: number;
   mounthly_payment_1c: number;
 };
+type ContractType = {
+  id: number;
+  contract_number: string;
+  company_name: string;
+  total_debt_1c: string; // "1801258.80" kabi, shuning uchun string
+  debt_1c: string;
+  contract_summary_1c: string;
+  mounthly_payment_1c: string;
+  due_date: string; // yoki Date agar parse qilinsa
+  end_date: string;
+  filial_name: string;
+  status: boolean;
+};
+
 type Call_history = {
   id: number;
   username: string;
   phone_number: string;
   call_type: string;
   call_date: string;
+  contracts:ContractType;
   time: number;
 };
 type AgentDetails = {
@@ -222,8 +238,15 @@ useEffect(() => {
   allClientMarkersRef.current = [];
 
   clientsOnMap.forEach((client) => {
+    console.log(225,client);
+    
     const lat = parseFloat(client.latitude);
     const lon = parseFloat(client.longitude);
+const totalDebt = client.contracts?.reduce(
+  (sum, c) => sum + parseFloat(c.total_debt_1c || "0"),
+  0
+);
+
     if (isNaN(lat) || isNaN(lon)) return;
 
     const marker = L.marker([lat, lon], {
@@ -235,10 +258,11 @@ useEffect(() => {
     })
       .addTo(mapRef.current!)
       .bindPopup(
-        `<strong>Mijoz: ${client.first_name} ${client.last_name}</strong><br/>
-         📞 <a href="tel:${client.phone_number}">${client.phone_number}</a><br/>
-         📍 Manzil: ${client.address_name || "Noma'lum"}`
-      );
+  `<strong>Mijoz: ${client.first_name} ${client.last_name}</strong><br/>
+   📞 <a href="tel:${client.phone_number}">${client.phone_number}</a><br/>
+   📍 Umumiy qarzi: ${totalDebt.toLocaleString("uz-UZ")} so'm`
+);
+
     allClientMarkersRef.current.push(marker);
   });
 }, [clientsOnMap]);// 👈 selectedAgentData ham qo'shildi // mapRef.current ni qo'shish ham xavfsiz, lekin kerak emas 
