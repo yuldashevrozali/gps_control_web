@@ -217,7 +217,6 @@ const MapHistory = () => {
   const startMarkerRef = useRef<L.Marker | null>(null);
   const endMarkerRef = useRef<L.Marker | null>(null);
   const stopMarkersRef = useRef<L.Marker[]>([]);
-  const clientMarkersRef = useRef<L.Marker[]>([]);
   const [theme, setTheme] = useState("light");
   const [SelectID, setSelectID] = useState<number | null>(null);
   const [agents, setAgents] = useState<Agent[]>([]);
@@ -228,8 +227,6 @@ const MapHistory = () => {
   const [modalData, setModalData] = useState<ModalData | null>(null);
   const [clientsOnMap, setClientsOnMap] = useState<ClientFromAPI[]>([]);
   const allClientMarkersRef = useRef<L.Marker[]>([]);
-const agentClientMarkersRef = useRef<L.Marker[]>([]);
-
   // Temani kuzatish
   useEffect(() => {
     const checkThemeChange = () => {
@@ -448,21 +445,17 @@ useEffect(() => {
   } | null = null;
 
   // Sana formatlash funksiyasi
-  const formatTime = (timeString: string): string => {
-    if (!timeString) return "Noma'lum";
-    const date = new Date(timeString);
-    if (isNaN(date.getTime())) return "Noto'g'ri sana";
+  function formatTime(timeString: string | undefined): string {
+  if (!timeString) return "Noma'lum";
+  const date = new Date(timeString);
+  if (isNaN(date.getTime())) return "Noto'g'ri sana";
 
-    return new Intl.DateTimeFormat("uz-UZ", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-      hour12: false,
-    }).format(date);
-  };
+  return new Intl.DateTimeFormat("uz-UZ", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(date);
+} 
 
   for (let i = 1; i < location_history.length; i++) {
     const prev = location_history[i - 1];
@@ -478,10 +471,6 @@ useEffect(() => {
     // ✅ Formatlangan sana bilan chiqarish
     console.log(formatTime(prev.timestamp), 460); // Masalan: "06.08.2025, 05:40:06" 460
 
-    const prevTime = new Date(prev.timestamp).getTime();
-    const currTime = new Date(curr.timestamp).getTime();
-    const diffMs = currTime - prevTime;
-    const diffMinutes = diffMs / (1000 * 60);
 
     // Agar juda yaqin joyda bo'lsa — to'xtash boshlanmoqda yoki davom etayotgan
     if (distance < SAME_LOCATION_THRESHOLD) {
@@ -638,9 +627,13 @@ useEffect(() => {
           }}>
             📞 {SelectID ? agents.find(a => a.id === SelectID)?.phone_number || 'Noma\'lum' : 'Tanlang'}
             &nbsp;|&nbsp;
-            ⏰ {SelectID ? formatTime(agents.find(a => a.id === SelectID)?.start_time) : 'Boshlanish'}
+            ⏰ {SelectID && agents.find(a => a.id === SelectID)?.start_time
+  ? formatTime(agents.find(a => a.id === SelectID)!.start_time!)
+  : 'Boshlanish'}
             &nbsp;|&nbsp;
-            ⏰ {SelectID ? formatTime(agents.find(a => a.id === SelectID)?.end_time) : 'Tugash'}
+            ⏰ {SelectID && agents.find(a => a.id === SelectID)?.end_time
+  ? formatTime(agents.find(a => a.id === SelectID)!.end_time!)
+  : 'tugash'}
           </div>
 
           {/* SANA TANLASH */}
