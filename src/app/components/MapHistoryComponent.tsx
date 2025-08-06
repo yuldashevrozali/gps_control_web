@@ -195,19 +195,20 @@ function totalDistance(points: AgentLocation[]): number {
  
 
 // Yangi: Vaqtni formatlash
-function formatTime(timeString: string | undefined): string {
+function formatTime(timeString: string): string {
   if (!timeString) return "Noma'lum";
   const date = new Date(timeString);
-  // ISO formatni to'g'ri parse qilish uchun
   if (isNaN(date.getTime())) return "Noto'g'ri sana";
-  return date.toLocaleString('uz-UZ', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
+
+  return new Intl.DateTimeFormat("uz-UZ", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
     hour12: false,
-  });
+  }).format(date);
 }
 
 const MapHistory = () => {
@@ -302,32 +303,6 @@ const totalDebt = client.contracts?.reduce(
     allClientMarkersRef.current.push(marker);
   });
 }, [clientsOnMap]);// 👈 selectedAgentData ham qo'shildi // mapRef.current ni qo'shish ham xavfsiz, lekin kerak emas 
-useEffect(() => {
-  if (!selectedAgentData || !mapRef.current) return;
-
-  // Faqat agent bilan ishlagan mijoz markerlarini tozalash
-  agentClientMarkersRef.current.forEach((m) => mapRef.current!.removeLayer(m));
-  agentClientMarkersRef.current = [];
-
-  selectedAgentData.contracts?.forEach((c, contractIdx) => {
-  c.client.static_locations.forEach((loc, locIdx) => {
-    const offset = 0.0004 * (contractIdx + locIdx);
-    const marker = L.marker([loc.lat + offset, loc.lon + offset], {
-      icon: L.icon({
-        iconUrl: "/img/user-svgrepo-com.svg",
-        iconSize: [40, 40],
-        iconAnchor: [20, 40],
-      }),
-    })
-      .addTo(mapRef.current!)
-      .bindPopup(
-        `<strong>${c.client.full_name}</strong><br/>📄 ${c.contract_number}<br/>💰 ${c.total_debt_1c.toLocaleString()} so'm`
-      );
-    agentClientMarkersRef.current.push(marker);
-  });
-});
-
-}, [selectedAgentData]);
 
   // Agentlar ro'yxatini olish
   useEffect(() => {
@@ -373,7 +348,16 @@ useEffect(() => {
   stopMarkersRef.current = [];
 
   // Tanlangan sanani formatlash (YYYY-MM-DD)
-  const formattedDate = selectedDate.toISOString().split("T")[0];
+  function formatDateToYYYYMMDD(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+const formattedDate = formatDateToYYYYMMDD(selectedDate);
+console.log(formattedDate,358);
+
 
   // API orqali agentning kunlik lokatsiya tarixini olish
   axios
@@ -428,147 +412,153 @@ useEffect(() => {
   }, [theme]);
 
   // Xaritani yangilash
-  useEffect(() => {
+// Xaritani yangilash
+// To'xtashlarni aniqlash va marker chiqarish
+function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371000; // Yer radiusi (metr)
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) *
+    Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) *
+    Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c; // masofa metrda
+}
+useEffect(() => {
   if (!selectedAgentData || !mapRef.current) return;
+  const { location_history } = selectedAgentData;
 
-  const { location_history, contracts } = selectedAgentData;
-
-  // Eski markerlar va polyline'lar tozalanadi
-  [polylineRef, startMarkerRef, endMarkerRef].forEach((ref) => {
-    if (ref.current) mapRef.current!.removeLayer(ref.current);
-  });
-  [...stopMarkersRef.current, ...clientMarkersRef.current].forEach((m) =>
-    mapRef.current!.removeLayer(m)
-  );
+  // Eski to'xtash markerlarini tozalash
+  stopMarkersRef.current.forEach((m) => mapRef.current!.removeLayer(m));
   stopMarkersRef.current = [];
-  clientMarkersRef.current = [];
 
   if (!location_history || location_history.length === 0) return;
 
-  const segments: L.LatLngTuple[][] = [];
-  let currentSegment: L.LatLngTuple[] = [];
+  // Koordinatalar "bir xil" deb hisoblash uchun masofa chegarasi (metr)
+  const SAME_LOCATION_THRESHOLD = 20; // 20 metrdan kam farq — bir joyda
 
-  // Segmentlash
-  for (let i = 0; i < location_history.length; i++) {
-    const point = location_history[i];
-    const latlng: L.LatLngTuple = [point.latitude, point.longitude];
+  let currentStop: {
+    startIdx: number;
+    endIdx: number;
+    lat: number;
+    lon: number;
+  } | null = null;
 
-    if (i > 0) {
-      const prev = location_history[i - 1];
-      const prevTime = new Date(prev.timestamp).getTime();
-      const currTime = new Date(point.timestamp).getTime();
-      const diffMinutes = (currTime - prevTime) / (1000 * 60);
+  // Sana formatlash funksiyasi
+  const formatTime = (timeString: string): string => {
+    if (!timeString) return "Noma'lum";
+    const date = new Date(timeString);
+    if (isNaN(date.getTime())) return "Noto'g'ri sana";
 
-      if (diffMinutes > 1) {
-        if (currentSegment.length > 1) segments.push(currentSegment);
-        currentSegment = [];
-      }
-    }
+    return new Intl.DateTimeFormat("uz-UZ", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+    }).format(date);
+  };
 
-    currentSegment.push(latlng);
-  }
-  if (currentSegment.length > 1) segments.push(currentSegment);
-
-  // Polyline'larni chizish
-  const waypoints = segments.flat().map(([lat, lon]) => L.latLng(lat, lon));
-
-// Routingni yaratish
-const routingControl = L.Routing.control({
-  waypoints,
-  lineOptions: {
-    styles: [
-      {
-      color: "#1A73E8",   // Yandex uslubidagi ko‘k rang
-      weight: 8,          // Biroz qalinroq
-      opacity: 0.95,      // Devor holatida shaffof emas
-    }
-    ],
-  },
-  routeWhileDragging: false,
-  show: false,
-  addWaypoints: false,
-  fitSelectedRoutes: true,
-  draggableWaypoints: false,
-  createMarker: () => null, // Marshrut bo‘yicha markerlar qo‘shilmasin
-}).addTo(mapRef.current!);
-
-// Saqlab qo‘yish uchun ref
-polylineRef.current = routingControl as unknown as L.Polyline;
-
-  // Boshlanish markeri
-  const startLatLng = segments[0][0];
-  const start = L.marker(startLatLng, {
-    icon: L.icon({
-      iconUrl: "https://maps.google.com/mapfiles/ms/icons/green-dot.png",
-      iconSize: [36, 36],
-      iconAnchor: [18, 36],
-    }),
-  }).addTo(mapRef.current);
-  startMarkerRef.current = start;
-
-  // Tugash markeri
-  const lastSegment = segments[segments.length - 1];
-  const endLatLng = lastSegment[lastSegment.length - 1];
-  const end = L.marker(endLatLng, {
-    icon: L.icon({
-      iconUrl: "https://maps.google.com/mapfiles/ms/icons/red-dot.png",
-      iconSize: [32, 32],
-      iconAnchor: [16, 32],
-    }),
-  }).addTo(mapRef.current);
-  endMarkerRef.current = end;
-
-  // Disconnect / Reconnect va vaqt oralig'i markerlari
-
-
-  
   for (let i = 1; i < location_history.length; i++) {
     const prev = location_history[i - 1];
     const curr = location_history[i];
+
+    const distance = haversineDistance(
+      prev.latitude,
+      prev.longitude,
+      curr.latitude,
+      curr.longitude
+    );
+
+    // ✅ Formatlangan sana bilan chiqarish
+    console.log(formatTime(prev.timestamp), 460); // Masalan: "06.08.2025, 05:40:06" 460
+
     const prevTime = new Date(prev.timestamp).getTime();
     const currTime = new Date(curr.timestamp).getTime();
-    const diffMinutes = (currTime - prevTime) / (1000 * 60);
+    const diffMs = currTime - prevTime;
+    const diffMinutes = diffMs / (1000 * 60);
 
-    if (diffMinutes > 1) {
-      const offset = 0.0005 * i; // markerlar ustma-ust chiqmasligi uchun
+    // Agar juda yaqin joyda bo'lsa — to'xtash boshlanmoqda yoki davom etayotgan
+    if (distance < SAME_LOCATION_THRESHOLD) {
+      if (!currentStop) {
+        // Yangi to'xtash boshlandi
+        currentStop = {
+          startIdx: i - 1,
+          endIdx: i,
+          lat: prev.latitude,
+          lon: prev.longitude,
+        };
+      } else {
+        // Davom etayotgan to'xtash
+        currentStop.endIdx = i;
+      }
+    } else {
+      // Agar to'xtash tugagan bo'lsa — uni saqlash
+      if (currentStop) {
+        const stopDurationMs =
+          new Date(location_history[currentStop.endIdx].timestamp).getTime() -
+          new Date(location_history[currentStop.startIdx].timestamp).getTime();
+        const stopMinutes = stopDurationMs / (1000 * 60);
 
-      const disconnectMarker = L.marker(
-        [prev.latitude + offset, prev.longitude + offset],
-        {
-          icon: L.icon({
-            iconUrl: "/icons/disconnect-red.png",
-            iconSize: [28, 28],
-            iconAnchor: [14, 28],
-          }),
+        if (stopMinutes >= 10) {
+          let iconUrl = "";
+          if (stopMinutes >= 60) iconUrl = "/icons/black-circle.png";
+          else if (stopMinutes >= 30) iconUrl = "/icons/red-circle.png";
+          else if (stopMinutes >= 10) iconUrl = "/icons/yellow-circle.svg";
+
+          if (iconUrl) {
+            const offset = 0.0003 * stopMarkersRef.current.length;
+            const totalDist = totalDistance(location_history.slice(0, currentStop.endIdx));
+
+            const marker = L.marker(
+              [currentStop.lat + offset, currentStop.lon + offset],
+              {
+                icon: L.icon({
+                  iconUrl,
+                  iconSize: [24, 24],
+                  iconAnchor: [12, 24],
+                }),
+              }
+            )
+              .addTo(mapRef.current!)
+              .bindPopup(
+                `⏱ To'xtash (${stopMinutes.toFixed(1)} daqiqa)<br/>🧭 ${totalDist.toFixed(
+                  2
+                )} km`
+              );
+
+            stopMarkersRef.current.push(marker);
+          }
         }
-      )
-        .addTo(mapRef.current!)
-        .bindPopup(`❌ Harakat yo'q (>${diffMinutes.toFixed(1)} daqiqa)`);
+        currentStop = null;
+      }
+    }
+  }
 
-      const reconnectMarker = L.marker(
-        [curr.latitude + offset, curr.longitude + offset],
-        {
-          icon: L.icon({
-            iconUrl: "/icons/reconnect-blue.png",
-            iconSize: [28, 28],
-            iconAnchor: [14, 28],
-          }),
-        }
-      )
-        .addTo(mapRef.current!)
-        .bindPopup(`✅ Harakat tiklandi`);
+  // Loop tugagandan keyin oxirgi to'xtash ham bo'lishi mumkin
+  if (currentStop) {
+    const stopDurationMs =
+      new Date(location_history[currentStop.endIdx].timestamp).getTime() -
+      new Date(location_history[currentStop.startIdx].timestamp).getTime();
+    const stopMinutes = stopDurationMs / (1000 * 60);
 
-      stopMarkersRef.current.push(disconnectMarker, reconnectMarker);
-
-      // Qo‘shimcha rangli marker: uzoq vaqt turish belgisi
+    if (stopMinutes >= 10) {
       let iconUrl = "";
-      if (diffMinutes >= 60) iconUrl = "/icons/black-circle.png";
-      else if (diffMinutes >= 30) iconUrl = "/icons/red-circle.png";
-      else if (diffMinutes >= 10) iconUrl = "/icons/yellow-circle.svg";
+      if (stopMinutes >= 60) iconUrl = "/icons/black-circle.png";
+      else if (stopMinutes >= 30) iconUrl = "/icons/red-circle.png";
+      else if (stopMinutes >= 10) iconUrl = "/icons/yellow-circle.svg";
 
       if (iconUrl) {
-        const pauseMarker = L.marker(
-          [prev.latitude + offset * 2, prev.longitude + offset * 2],
+        const offset = 0.0003 * stopMarkersRef.current.length;
+        const totalDist = totalDistance(location_history.slice(0, currentStop.endIdx));
+
+        const marker = L.marker(
+          [currentStop.lat + offset, currentStop.lon + offset],
           {
             icon: L.icon({
               iconUrl,
@@ -578,54 +568,18 @@ polylineRef.current = routingControl as unknown as L.Polyline;
           }
         )
           .addTo(mapRef.current!)
-          .bindPopup(`⏱ Harakat yo'q (${diffMinutes.toFixed(1)} daqiqa)`);
+          .bindPopup(
+            `⏱ To'xtash (${stopMinutes.toFixed(1)} daqiqa)<br/>🧭 ${totalDist.toFixed(
+              2
+            )} km`
+          );
 
-        stopMarkersRef.current.push(pauseMarker);
+        stopMarkersRef.current.push(marker);
       }
     }
   }
-
-  // To‘xtash nuqtalari
-  location_history.forEach((loc, i) => {
-  if (loc.is_stop) {
-    const dist = totalDistance(location_history.slice(0, i + 1));
-    const offset = 0.0003 * i;
-    const marker = L.marker([loc.latitude + offset, loc.longitude + offset], {
-      icon: L.icon({
-        iconUrl: "https://maps.google.com/mapfiles/ms/icons/yellow-dot.png",
-        iconSize: [32, 32],
-        iconAnchor: [16, 32],
-      }),
-    }).addTo(mapRef.current!).bindPopup(`To'xtash nuqtasi<br/>🧭 ${dist.toFixed(2)} km`);
-    stopMarkersRef.current.push(marker);
-  }
-});
-
-
-  // Mijoz markerlari
-  // Mijoz markerlari (contracts bo‘yicha)
-contracts?.forEach((c, contractIdx) => {
-  c.client.static_locations.forEach((loc, locIdx) => {
-    const offset = 0.0004 * (contractIdx + locIdx);
-    const marker = L.marker([loc.lat + offset, loc.lon + offset], {
-      icon: L.icon({
-        iconUrl: "/img/user-svgrepo-com.svg",
-        iconSize: [40, 40],
-        iconAnchor: [20, 40],
-      }),
-    })
-      .addTo(mapRef.current!)
-      .bindPopup(
-        `<strong>${c.client.full_name}</strong><br/>📄 ${c.contract_number}<br/>💰 ${parseFloat(
-          String(c.total_debt_1c || "0")
-        ).toLocaleString()} so'm`
-      );
-    clientMarkersRef.current.push(marker);
-  });
-});
- 
-
-}, [selectedAgentData]);
+  
+}, [selectedAgentData]); 
  ;
  
  
